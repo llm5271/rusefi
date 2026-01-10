@@ -47,7 +47,7 @@ public:
 	/**
 	 * Configures the device for all messages to transmit from.
 	 */
-	static void setDevice(CANDriver* device1, CANDriver* device2);
+	static void setDevice(size_t idx, CANDriver* device);
 #endif // EFI_CAN_SUPPORT
 
 	size_t busIndex = 0;
@@ -102,7 +102,7 @@ protected:
 
 private:
 #if EFI_CAN_SUPPORT
-	static CANDriver* s_devices[2];
+	static CANDriver* s_devices[EFI_CAN_BUS_COUNT];
 #endif // EFI_CAN_SUPPORT
 };
 
@@ -119,7 +119,7 @@ class CanTxTyped final : public CanTxMessage
 public:
 	explicit CanTxTyped(CanCategory p_category, uint32_t p_id, bool p_isExtended, size_t canChannel) : CanTxMessage(p_category, p_id, sizeof(TData), canChannel, p_isExtended) { }
 
-#if EFI_CAN_SUPPORT
+#if HAS_CAN_FRAME
 	/**
 	 * Access members of the templated type.
 	 *
@@ -134,7 +134,7 @@ public:
 	TData& get() {
 		return *reinterpret_cast<TData*>(&m_frame.data8);
 	}
-#endif // EFI_CAN_SUPPORT
+#endif // HAS_CAN_FRAME
 };
 
 template <typename TData>

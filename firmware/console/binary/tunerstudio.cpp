@@ -84,11 +84,12 @@
 #include "bench_test.h"
 #include "status_loop.h"
 #include "mmc_card.h"
-#include "tuner_detector_utils.h"
 
 #if EFI_SIMULATOR
 #include "rusEfiFunctionalTest.h"
 #endif /* EFI_SIMULATOR */
+
+#include "board_overrides.h"
 
 #if EFI_TUNER_STUDIO
 
@@ -223,6 +224,7 @@ static void sendOkResponse(TsChannelBase *tsChannel) {
 
 void sendErrorCode(TsChannelBase *tsChannel, uint8_t code, const char *msg) {
 	//TODO uncomment once I have test it myself
+	UNUSED(msg);
 	//if (msg != DO_NOT_LOG) {
 	//	efiPrintf("TS <- Err: %d [%s]", code, msg);
 	//}
@@ -272,9 +274,9 @@ PUBLIC_API_WEAK bool isTouchingVe(uint16_t offset, uint16_t count) {
 }
 
 static void onCalibrationWrite(uint16_t page, uint16_t offset, uint16_t count) {
-		if (isTouchingVe(offset, count)) {
-		  calibrationsVeWriteTimer.reset();
-    }
+	if ((page == TS_PAGE_SETTINGS) && isTouchingVe(offset, count)) {
+		calibrationsVeWriteTimer.reset();
+	}
 }
 
 bool isTouchingArea(uint16_t offset, uint16_t count, int areaStart, int areaSize) {
@@ -313,6 +315,8 @@ void TunerStudio::handleWriteChunkCommand(TsChannelBase* tsChannel, uint16_t pag
 		return;
 	}
 
+	onCalibrationWrite(page, offset, count);
+
 	// Special case
 	if (page == TS_PAGE_SETTINGS) {
 		if (isLockedFromUser()) {
@@ -323,7 +327,6 @@ void TunerStudio::handleWriteChunkCommand(TsChannelBase* tsChannel, uint16_t pag
 		// Skip the write if a preset was just loaded - we don't want to overwrite it
 		// [tag:popular_vehicle]
 		if (!needToTriggerTsRefresh()) {
-			onCalibrationWrite(page, offset, count);
 			memcpy(addr, content, count);
 		} else {
 			efiPrintf("Ignoring TS -> Page %d write chunk offset %d count %d (output_count=%d)",
@@ -335,7 +338,7 @@ void TunerStudio::handleWriteChunkCommand(TsChannelBase* tsChannel, uint16_t pag
 		}
 		// Force any board configuration options that humans shouldn't be able to change
 		// huh, why is this NOT within above 'needToTriggerTsRefresh()' condition?
-		setBoardConfigOverrides();
+		call_board_override(custom_board_ConfigOverrides);
 	} else {
 		memcpy(addr, content, count);
 	}
@@ -362,6 +365,8 @@ void TunerStudio::handleCrc32Check(TsChannelBase *tsChannel, uint16_t page, uint
 	uint32_t crc = SWAP_UINT32(crc32(start, count));
 	tsChannel->sendResponse(TS_CRC, (const uint8_t *) &crc, 4);
 	efiPrintf("TS <- Get CRC page %d offset %d count %d result %08x", page, offset, count, (unsigned int)crc);
+	// todo: rename to onConfigCrc?
+	ConfigurationWizard::onConfigOnStartUpOrBurn(false);
 }
 
 #if EFI_TS_SCATTER
@@ -464,7 +469,7 @@ static void handleBurnCommand(TsChannelBase* tsChannel, uint16_t page) {
 		tsState.burnCommandCounter++;
 
 		efiPrintf("TS -> Burn");
-		validateConfigOnStartUpOrBurn();
+		validateConfigOnStartUpOrBurn(true);
 
 		// problem: 'popular vehicles' dialog has 'Burn' which is very NOT helpful on that dialog
 		// since users often click both buttons producing a conflict between ECU desire to change settings
@@ -472,6 +477,7 @@ static void handleBurnCommand(TsChannelBase* tsChannel, uint16_t page) {
 		// Skip the burn if a preset was just loaded - we don't want to overwrite it
 		// [tag:popular_vehicle]
 		if (!needToTriggerTsRefresh()) {
+			efiPrintf("TS -> Burn, we are allowed to burn");
 			requestBurn();
 		}
 		efiPrintf("Burned in %.1fms", t.getElapsedSeconds() * 1e3);
@@ -539,6 +545,15 @@ static void handleTestCommand(TsChannelBase* tsChannel) {
 		tsChannel->write((const uint8_t*)testOutputBuffer, strlen(testOutputBuffer));
 	}
 	tsChannel->flush();
+}
+
+static void handleGetConfigErorr(TsChannelBase* tsChannel) {
+	const char* errorMessage = hasFirmwareError() ? getCriticalErrorMessage() : getConfigErrorMessage();
+	if (strlen(errorMessage) == 0) {
+		// Check for engine's warning code
+		errorMessage = engine->engineState.warnings.getWarningMessage();
+	}
+	tsChannel->sendResponse(TS_CRC, reinterpret_cast<const uint8_t*>(errorMessage), strlen(errorMessage), true);
 }
 
 /**
@@ -885,6 +900,9 @@ int TunerStudio::handleCrcCommand(TsChannelBase* tsChannel, char *data, int inco
 	case 'T':
 		handleTestCommand(tsChannel);
 		break;
+	case TS_GET_CONFIG_ERROR:
+		handleGetConfigErorr(tsChannel);
+		break;
 #if EFI_SIMULATOR
 	case TS_SIMULATE_CAN:
 		void handleWrapCan(TsChannelBase* tsChannel, char *data, int incomingPacketSize);
@@ -998,11 +1016,6 @@ int TunerStudio::handleCrcCommand(TsChannelBase* tsChannel, char *data, int inco
 		criticalError("TS_PERF_TRACE_GET_BUFFER not supported");
 		break;
 #endif /* ENABLE_PERF_TRACE */
-	case TS_GET_CONFIG_ERROR: {
-		const char* configError = hasFirmwareError()? getCriticalErrorMessage() : getConfigErrorMessage();
-		tsChannel->sendResponse(TS_CRC, reinterpret_cast<const uint8_t*>(configError), strlen(configError), true);
-		break;
-	}
 	case TS_QUERY_BOOTLOADER: {
 		uint8_t bldata = TS_QUERY_BOOTLOADER_NONE;
 #if EFI_USE_OPENBLT
@@ -1026,8 +1039,8 @@ static char tsErrorBuff[80];
 #endif // EFI_PROD_CODE || EFI_SIMULATOR
 
 bool isTuningVeNow() {
-	return (!TunerDetectorUtils::isTuningDetectorUndefined()) &&
-		!calibrationsVeWriteTimer.hasElapsedSec(TunerDetectorUtils::getUserEnteredTuningDetector());
+  int tuningDetector = engineConfiguration->isTuningDetectorEnabled ? 0 : 20;
+	return !calibrationsVeWriteTimer.hasElapsedSec(tuningDetector);
 }
 
 void startTunerStudioConnectivity() {

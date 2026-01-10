@@ -60,8 +60,6 @@
 #include "vr_pwm.h"
 #include "adc_subscription.h"
 #include "gc_generic.h"
-#include "tuner_detector_utils.h"
-
 
 #if EFI_TUNER_STUDIO
 #include "tunerstudio.h"
@@ -522,9 +520,20 @@ bool validateConfigOnStartUpOrBurn() {
   if (!validateBoardConfig()) {
     return false;
   }
+#if defined(HW_HELLEN_UAEFI)
+  // todo: make this board-specific validation callback!
+  pickEtbOrStepper();
+#endif
   if (!validateGdi()) {
     return false;
   }
+  if (engineConfiguration->etbMinimumPosition + 1 >= engineConfiguration->etbMaximumPosition) {
+		criticalError("Broken ETB min/max %d %d",
+		  engineConfiguration->etbMinimumPosition,
+		  engineConfiguration->etbMaximumPosition);
+		return false;
+  }
+
   defaultsOrFixOnBurn();
 	if (engineConfiguration->cylindersCount > MAX_CYLINDER_COUNT) {
 		criticalError("Invalid cylinder count: %d", engineConfiguration->cylindersCount);
@@ -575,6 +584,9 @@ bool validateConfigOnStartUpOrBurn() {
 
 		ensureArrayIsAscendingOrDefault("STFT Rpm", config->fuelTrimRpmBins);
 		ensureArrayIsAscendingOrDefault("STFT Load", config->fuelTrimLoadBins);
+
+		ensureArrayIsAscendingOrDefault("knock rpm", config->maxKnockRetardRpmBins);
+		ensureArrayIsAscendingOrDefault("knock tps", config->maxKnockRetardLoadBins);
 
 		ensureArrayIsAscendingOrDefault("TC slip", engineConfiguration->tractionControlSlipBins);
 		ensureArrayIsAscendingOrDefault("TC speed", engineConfiguration->tractionControlSpeedBins);
@@ -693,7 +705,13 @@ bool validateConfigOnStartUpOrBurn() {
 		ensureArrayIsAscending("Oil pressure protection", config->minimumOilPressureBins);
 	}
 
+
 	return true;
+}
+
+bool validateConfigOnStartUpOrBurn(bool isRunningOnBurn) {
+	ConfigurationWizard::onConfigOnStartUpOrBurn(isRunningOnBurn);
+	return validateConfigOnStartUpOrBurn();
 }
 
 #if !EFI_UNIT_TEST

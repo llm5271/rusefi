@@ -14,8 +14,6 @@ endif
 # Disable ChibiOS memory core and heap
 DDEFS += -DCH_CFG_USE_MEMCORE=FALSE -DCH_CFG_USE_HEAP=FALSE
 
-DDEFS += -DENABLE_AUTO_DETECT_HSE=TRUE -DSTM32_HSECLK=25000000
-
 # disable some modules to shrink bootloader binary
 DDEFS += -DEFI_BOOTLOADER
 DDEFS += -DHAL_USE_EXT=FALSE -DHAL_USE_ICU=FALSE -DHAL_USE_PWM=FALSE -DHAL_USE_RTC=FALSE -DEF_LUA=FALSE
@@ -31,9 +29,23 @@ DDEFS += -DSTM32_NOCACHE_ENABLE=FALSE
 
 DDEFS += -DEFI_UNIT_TEST=0 -DEFI_PROD_CODE=1 -DEFI_SIMULATOR=0
 
+PROJECT_DIR = ..
+include $(PROJECT_DIR)/rusefi_rules.mk
+
 # Compiler options here.
 ifeq ($(USE_OPT),)
-  USE_OPT = $(EXTRA_PARAMS) $(EXTRA_2_PARAMS) $(EXTRA_3_PARAMS) $(DEBUG_LEVEL_BLT_OPT) $(RFLAGS) -Wno-error=implicit-fallthrough -Wno-error=bool-operation -fomit-frame-pointer -falign-functions=16 -Werror -Wno-error=pointer-sign -Wno-error=unused-function -Wno-error=unused-variable -Wno-error=sign-compare -Wno-error=unused-parameter -Wno-error=missing-field-initializers -Werror=type-limits -Wno-error=strict-aliasing -Wno-error=attributes
+  USE_OPT = $(EXTRA_PARAMS) $(EXTRA_2_PARAMS) $(EXTRA_3_PARAMS) $(DEBUG_LEVEL_BLT_OPT) $(RFLAGS)
+  USE_OPT += $(RUSEFI_OPT)
+  # huh why do we have custom settings not uniform with rusefi_rules.mk?
+  USE_OPT += -Wno-error=implicit-fallthrough \
+    -Wno-error=bool-operation \
+    -fomit-frame-pointer \
+    -falign-functions=16 \
+    -Wno-error=pointer-sign \
+    -Wno-error=unused-function \
+    -Werror=type-limits \
+    -Wno-error=strict-aliasing\
+    -Wno-error=attributes
 endif
 
 # let everyone know that we are compiling bootloader
@@ -124,7 +136,6 @@ endif
 
 # Define project name here
 PROJECT = openblt_$(PROJECT_BOARD)
-PROJECT_DIR = ..
 
 # Configure precompiled header
 PCH_DIR = $(PROJECT_DIR)/pch
@@ -192,6 +203,7 @@ CSRC =  $(ALLCSRC) \
 	$(PROJECT_DIR)/ext/openblt/Target/Source/boot.c \
 	$(PROJECT_DIR)/ext/openblt/Target/Source/com.c \
 	$(PROJECT_DIR)/ext/openblt/Target/Source/xcp.c \
+	$(PROJECT_DIR)/ext/openblt/Target/Source/cop.c \
 	$(PROJECT_DIR)/bootloader/openblt_chibios/nvm.c \
 	$(PROJECT_DIR)/hw_layer/openblt/hooks.c \
 

@@ -11,6 +11,8 @@ import com.rusefi.tune.xml.Page;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
+
 import static com.devexperts.logging.Logging.getLogging;
 import static com.rusefi.ConfigFieldImpl.unquote;
 import static org.junit.jupiter.api.Assertions.*;
@@ -21,6 +23,9 @@ public class TuneCanToolTest {
     @BeforeAll
     public static void before() {
         RootHolder.ROOT = "../../firmware/";
+        // somewhere deep we have append prefix is not absolute path, so let's make path absolute
+        //TODO: check if there exists more elegant way to initialize `TuneCanTool.boardPath` properly
+        TuneCanTool.boardPath = new File(RootHolder.ROOT + "config/boards/hellen/uaefi/").getAbsolutePath() + File.separator;
     }
 
     @Test
@@ -43,7 +48,7 @@ public class TuneCanToolTest {
             assertTrue(sb.indexOf("engineConfiguration->gppwm[1].loadAxis = GPPWM_Tps;") > 0);
             assertTrue(sb.indexOf("engineConfiguration->gppwm[2].loadAxis = GPPWM_Tps;") > 0);
             assertTrue(sb.indexOf("engineConfiguration->gppwm[3].loadAxis = GPPWM_Tps;") > 0);
-        } catch (final Exception e) {
+        } catch (Exception e) {
             System.err.print(String.format("TuneCanToolTest.testGPPWMTuneParse: Exception: %s", e.getMessage()));
             e.printStackTrace();
             throw e;

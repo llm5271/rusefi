@@ -1,5 +1,7 @@
 package com.rusefi.core;
 
+import com.rusefi.core.io.BundleInfo;
+
 public class RusEfiSignature {
     private final String branch;
     private final String year;
@@ -46,5 +48,22 @@ public class RusEfiSignature {
 
     public String getHash() {
         return hash;
+    }
+
+    @Override
+    public String toString() {
+        return "RusEfiSignature{" +
+            "branch='" + branch + '\'' +
+            ", year='" + year + '\'' +
+            ", month='" + month + '\'' +
+            ", day='" + day + '\'' +
+            ", bundleTarget='" + bundleTarget + '\'' +
+            ", hash='" + hash + '\'' +
+            '}';
+    }
+
+    public BundleInfo asBundleInfo() {
+        String branchName = "master".equals(branch) ? BundleInfo.DEVELOPMENT : branch;
+        return new BundleInfo(branchName, null, bundleTarget);
     }
 }

@@ -23,10 +23,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Arrays;
-import java.util.Objects;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
 import static com.devexperts.logging.Logging.getLogging;
 import static com.rusefi.ConfigFieldImpl.unquote;
@@ -40,7 +37,7 @@ import static com.rusefi.config.Field.niceToString;
  * <p>
  * [CannedTunes]
  * <p>
- * see <a href="https://github.com/rusefi/rusefi/wiki/Canned-Tune-Process">...</a>
+ * see <a href="https://wiki.rusefi.com/Canned-Tune-Process">...</a>
  */
 public class TuneCanTool {
     private static final Logging log = getLogging(TuneCanTool.class);
@@ -55,7 +52,7 @@ public class TuneCanTool {
     // see write_tune.sh for env variable to property mapping
     static final String ENGINE_TUNE_OUTPUT_FOLDER = System.getProperty("ENGINE_TUNE_OUTPUT_FOLDER", "../simulator/generated/");
     private static final String EXTENSION = ".cpp";
-    public static String boardPath = "config/boards/hellen/uaefi/";
+    public static String boardPath = new File("config/boards/hellen/uaefi/").getAbsolutePath();
 
     protected static IniFileModel ini;
 
@@ -321,7 +318,7 @@ public class TuneCanTool {
 
                 int ordinal;
                 try {
-                    ordinal = TuneTools.resolveEnumByName(customEnum, unquote(customValue.getValue()));
+                    ordinal = TuneTools.resolveEnumByName(customEnum, unquote(customValue.getValue()), ini.getDefines());
                 } catch (IllegalStateException e) {
                     log.info("Looks like things were renamed: " + customValue.getValue() + " not found in " + customEnum);
                     continue;

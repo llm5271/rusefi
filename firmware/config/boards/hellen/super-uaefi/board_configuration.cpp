@@ -8,6 +8,7 @@
 #include "defaults.h"
 #include "hellen_meta.h"
 #include "hellen_leds_100.cpp"
+#include "board_overrides.h"
 //#include "connectors/generated_board_pin_names.h"
 
 static void setInjectorPins() {
@@ -45,7 +46,7 @@ static void setupDefaultSensorInputs() {
   engineConfiguration->vehicleSpeedSensorInputPin = Gpio::MM100_IN_D3;
 }
 
-void setBoardConfigOverrides() {
+static void super_uaefi_boardConfigOverrides() {
 	setHellenMegaEnPin();
 	setHellenVbatt();
 
@@ -63,7 +64,7 @@ bool validateBoardConfig() {
   return true;
 }
 
-static void setDefaultETBPins() {
+void setUaefiDefaultETBPins() {
   // users would want to override those if using H-bridges for stepper idle control
   setupTLE9201IncludingStepper(/*PWM controlPin*/Gpio::MM100_OUT_PWM3, Gpio::MM100_OUT_PWM4, Gpio::MM100_SPI2_MISO);
   setupTLE9201IncludingStepper(/*PWM controlPin*/Gpio::MM100_OUT_PWM5, Gpio::MM100_SPI2_MOSI, Gpio::MM100_USB1ID, 1);
@@ -72,13 +73,13 @@ static void setDefaultETBPins() {
 /**
  * @brief   Board-specific configuration defaults.
  *
- * See also setDefaultEngineConfiguration
+
  *
  */
-void setBoardDefaultConfiguration() {
+static void super_uaefi_boardDefaultConfiguration() {
 	setInjectorPins();
 	setIgnitionPins();
-	setDefaultETBPins();
+	setUaefiDefaultETBPins();
 
   setHellenMMbaro();
 
@@ -111,7 +112,7 @@ void setBoardDefaultConfiguration() {
 	// Some sensible defaults for other options
 	setCrankOperationMode();
 
-	setAlgorithm(LM_SPEED_DENSITY);
+	setAlgorithm(engine_load_mode_e::LM_SPEED_DENSITY);
 
 	engineConfiguration->injectorCompensationMode = ICM_FixedRailPressure;
 
@@ -162,4 +163,9 @@ Gpio* getBoardMetaOutputs() {
 
 int getBoardMetaDcOutputsCount() {
     return 2;
+}
+
+void setup_custom_board_overrides() {
+	custom_board_DefaultConfiguration = super_uaefi_boardDefaultConfiguration;
+	custom_board_ConfigOverrides = super_uaefi_boardConfigOverrides;
 }

@@ -127,12 +127,6 @@ public class AutoupdateUtil {
         );
     }
 
-    @Deprecated //
-    public static void trueLayout(Component component) {
-        // todo: inline in Aug of 2025
-        trueLayoutAndRepaint(component);
-    }
-
     public static void trueLayoutAndRepaint(Component component) {
         assertAwtThread();
         if (component == null)
@@ -175,6 +169,7 @@ public class AutoupdateUtil {
         for(StackTraceElement element : e.getStackTrace())
             trace.append(element.toString()).append("\n");
         SwingUtilities.invokeLater(() -> {
+            // todo: reuse ErrorMessageHelper?
             Window w = getSelectedWindow(Window.getWindows());
             JOptionPane.showMessageDialog(w, trace, "Error", JOptionPane.ERROR_MESSAGE);
         });
@@ -182,7 +177,7 @@ public class AutoupdateUtil {
 
     public static boolean hasExistingFile(String zipFileName, long completeFileSize, long lastModified) {
         File file = new File(zipFileName);
-        System.out.println("We have " + file.length() + " " + new Date(file.lastModified()) + " " + file.getAbsolutePath());
+        System.out.println("We have size=" + file.length() + " modified=" + new Date(file.lastModified()) + " " + file.getAbsolutePath());
         return file.length() == completeFileSize && file.lastModified() == lastModified;
     }
 

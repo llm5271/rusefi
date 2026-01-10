@@ -12,9 +12,17 @@
 bool hasInitGtest = false;
 
 GTEST_API_ int main(int argc, char **argv) {
-  if (argc == 2 && strcmp(argv[1], "sandbox") == 0) {
-    void runSandbox();
-    runSandbox();
+  if (argc == 2 && strcmp(argv[1], "ltft_sandbox") == 0) {
+    void runLtftSandbox();
+	// feed real log sensor data into our logic
+    runLtftSandbox();
+    return 0;
+  }
+
+  if (argc == 2 && strcmp(argv[1], "replay_log") == 0) {
+    void runLogReplay();
+	// feed real log sensor data into our logic
+    runLogReplay();
     return 0;
   }
 

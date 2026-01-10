@@ -4,13 +4,17 @@ import com.devexperts.logging.Logging;
 import com.opensr5.ini.*;
 import com.opensr5.ini.IniFileModelImpl;
 import com.rusefi.core.SignatureHelper;
+import org.jetbrains.annotations.NotNull;
+
+import java.io.FileNotFoundException;
 
 import static com.devexperts.logging.Logging.getLogging;
 
 public class RealIniFileProvider implements IniFileProvider {
     private static final Logging log = getLogging(RealIniFileProvider.class);
     @Override
-    public IniFileModel provide(String signature) {
+    @NotNull
+    public IniFileModel provide(String signature) throws IniNotFoundException {
         /**
          * first we look at {@link SignatureHelper#LOCAL_INI_CACHE_FOLDER}
          * second we attempt downloading
@@ -27,8 +31,13 @@ public class RealIniFileProvider implements IniFileProvider {
             localIniFile = IniFileModelImpl.findIniFile(IniFileModelImpl.INI_FILE_PATH);
         }
         if (localIniFile == null)
-            throw new IllegalStateException("Failed to locate .ini file in five different places!");
-        IniFileModelImpl iniFileModel = IniFileModelImpl.readIniFile(localIniFile);
+            throw new IniNotFoundException("Failed to locate .ini file in five different places!");
+        IniFileModelImpl iniFileModel = null;
+        try {
+            iniFileModel = IniFileModelImpl.readIniFile(localIniFile);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
         PrimeTunerStudioCache.prime(iniFileModel, localIniFile);
         return iniFileModel;
     }

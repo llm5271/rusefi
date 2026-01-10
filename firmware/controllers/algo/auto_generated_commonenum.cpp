@@ -1,6 +1,6 @@
 #include "global.h"
 #include "rusefi_enums.h"
-// was generated automatically by rusEFI tool  from rusefi_enums.h // by enum_to_string.jar tool on Mon Aug 04 01:57:36 UTC 2025
+// was generated automatically by rusEFI tool  from rusefi_enums.h // by enum_to_string.jar tool on Fri Dec 26 02:52:40 UTC 2025
 // see also gen_config_and_enums.bat
 
 
@@ -271,6 +271,8 @@ const char *getAntiLagActivationMode_e(antiLagActivationMode_e value){
 switch(value) {
 case ALWAYS_ON_ANTILAG:
   return "ALWAYS_ON_ANTILAG";
+case LUA_ANTILAG:
+  return "LUA_ANTILAG";
 case SWITCH_INPUT_ANTILAG:
   return "SWITCH_INPUT_ANTILAG";
   }
@@ -322,6 +324,8 @@ case B500KBPS:
   return "B500KBPS";
 case B50KBPS:
   return "B50KBPS";
+case B666KBPS:
+  return "B666KBPS";
 case B83KBPS:
   return "B83KBPS";
   }
@@ -411,6 +415,27 @@ case WBO_AEM_ID8:
   return "WBO_AEM_ID8";
 case WBO_AEM_ID9:
   return "WBO_AEM_ID9";
+  }
+ return NULL;
+}
+const char *getCan_wbo_re_hwidx_e(can_wbo_re_hwidx_e value){
+switch(value) {
+case WBO_RE_HWIDX0:
+  return "WBO_RE_HWIDX0";
+case WBO_RE_HWIDX1:
+  return "WBO_RE_HWIDX1";
+case WBO_RE_HWIDX2:
+  return "WBO_RE_HWIDX2";
+case WBO_RE_HWIDX3:
+  return "WBO_RE_HWIDX3";
+case WBO_RE_HWIDX4:
+  return "WBO_RE_HWIDX4";
+case WBO_RE_HWIDX5:
+  return "WBO_RE_HWIDX5";
+case WBO_RE_HWIDX6:
+  return "WBO_RE_HWIDX6";
+case WBO_RE_HWIDX7:
+  return "WBO_RE_HWIDX7";
   }
  return NULL;
 }
@@ -529,18 +554,16 @@ case ES_PLX:
   }
  return NULL;
 }
-const char *getEngine_load_mode_e(engine_load_mode_e value){
+const char *getFt_region_e(ft_region_e value){
 switch(value) {
-case LM_ALPHA_N:
-  return "LM_ALPHA_N";
-case LM_LUA:
-  return "LM_LUA";
-case LM_MOCK:
-  return "LM_MOCK";
-case LM_REAL_MAF:
-  return "LM_REAL_MAF";
-case LM_SPEED_DENSITY:
-  return "LM_SPEED_DENSITY";
+case ftRegionCruise:
+  return "ftRegionCruise";
+case ftRegionIdle:
+  return "ftRegionIdle";
+case ftRegionOverrun:
+  return "ftRegionOverrun";
+case ftRegionPower:
+  return "ftRegionPower";
   }
  return NULL;
 }
@@ -770,6 +793,8 @@ case ALWAYS_ACTIVE_LAUNCH:
   return "ALWAYS_ACTIVE_LAUNCH";
 case CLUTCH_INPUT_LAUNCH:
   return "CLUTCH_INPUT_LAUNCH";
+case LUA_LAUNCH:
+  return "LUA_LAUNCH";
 case STOP_INPUT_LAUNCH:
   return "STOP_INPUT_LAUNCH";
 case SWITCH_INPUT_LAUNCH:
@@ -1036,6 +1061,10 @@ case VVT_BOSCH_QUICK_START:
   return "VVT_BOSCH_QUICK_START";
 case VVT_CHRYSLER_PHASER:
   return "VVT_CHRYSLER_PHASER";
+case VVT_CUSTOM_1:
+  return "VVT_CUSTOM_1";
+case VVT_CUSTOM_2:
+  return "VVT_CUSTOM_2";
 case VVT_CUSTOM_25:
   return "VVT_CUSTOM_25";
 case VVT_CUSTOM_26:

@@ -167,7 +167,7 @@
  */
 #define EFI_TUNER_STUDIO_VERBOSE TRUE
 
-#define EFI_DEFAILED_LOGGING FALSE
+#define EFI_DETAILED_LOGGING FALSE
 
 /**
  * Dev console support.
@@ -362,7 +362,7 @@
 #endif
 
 #ifndef EFI_EMBED_INI_MSD
-#define EFI_EMBED_INI_MSD TRUE
+#define EFI_EMBED_INI_MSD FALSE
 #endif
 
 #ifndef EFI_USB_SERIAL
@@ -495,7 +495,7 @@
  */
 
 #ifndef EFI_USE_UART_DMA
-#define EFI_USE_UART_DMA TRUE
+#define EFI_USE_UART_DMA FALSE
 #endif
 
 #ifndef AUX_SERIAL_DEVICE

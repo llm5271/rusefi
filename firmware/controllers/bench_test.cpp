@@ -22,11 +22,16 @@
 
 #include "pch.h"
 #include "tunerstudio.h"
+#include "tunerstudio_calibration_channel.h"
 #include "long_term_fuel_trim.h"
 #include "can_common.h"
 #include "can_rx.h"
 #include "value_lookup.h"
 #include "can_msg_tx.h"
+#include "gm_sbc.h" // setStepperHw
+
+#include "fw_configuration.h"
+#include "board_overrides.h"
 
 static bool isRunningBench = false;
 static OutputPin *outputOnTheBenchTest = nullptr;
@@ -146,6 +151,7 @@ static void runBench(OutputPin *output, float onTimeMs, float offTimeMs, int cou
 // todo: migrate to smarter getOutputOnTheBenchTest() approach?
 static volatile bool isBenchTestPending = false;
 static bool widebandUpdatePending = false;
+static bool widebandUpdateFromFile = false;
 static uint8_t widebandUpdateHwId = 0;
 static float globalOnTimeMs;
 static float globalOffTimeMs;
@@ -175,8 +181,6 @@ static void pinbench(float ontimeMs, float offtimeMs, int iterations,
 static void cancelBenchTest() {
 	isRunningBench = false;
 }
-
-/*==========================================================================*/
 
 static void doRunFuelInjBench(size_t humanIndex, float onTimeMs, float offTimeMs, int count) {
 	if (humanIndex < 1 || humanIndex > engineConfiguration->cylindersCount) {
@@ -301,14 +305,15 @@ static void vvtValveBench(int vvtIndex) {
 #endif // EFI_VVT_PID
 }
 
-static void requestWidebandUpdate(int hwIndex)
+static void requestWidebandUpdate(int hwIndex, bool fromFile)
 {
 	widebandUpdateHwId = hwIndex;
+	widebandUpdateFromFile = fromFile;
 	widebandUpdatePending = true;
 	benchSemaphore.signal();
 }
 
-class BenchController : public ThreadController<UTILITY_THREAD_STACK_SIZE> {
+class BenchController : public ThreadController<4 * UTILITY_THREAD_STACK_SIZE> {
 public:
 	BenchController() : ThreadController("BenchTest", PRIO_BENCH_TEST) { }
 private:
@@ -325,7 +330,13 @@ private:
 
 			if (widebandUpdatePending) {
 	#if EFI_WIDEBAND_FIRMWARE_UPDATE && EFI_CAN_SUPPORT
-				updateWidebandFirmware(widebandUpdateHwId);
+				if (widebandUpdateFromFile) {
+					#if EFI_PROD_CODE
+						updateWidebandFirmwareFromFile(widebandUpdateHwId);
+					#endif
+				} else {
+					updateWidebandFirmware(widebandUpdateHwId);
+				}
 	#endif
 				widebandUpdatePending = false;
 			}
@@ -337,6 +348,7 @@ static BenchController instance;
 
 static void auxOutBench(int index) {
     // todo!
+    UNUSED(index);
 }
 
 #if EFI_HD_ACR
@@ -469,18 +481,32 @@ int getSavedBenchTestPinStates(uint32_t durationsInStateMs[2]) {
 }
 
 static void handleCommandX14(uint16_t index) {
-// todo: define ts_14_command magic constants and use those in tunerstudio.template.ini file!
 	switch (index) {
+	case TS_SET_STEPPER_IDLE:
+	  setStepperHw();
+	  onApplyPreset();
+		return;
 	case TS_GRAB_PEDAL_UP:
 		grabPedalIsUp();
 		return;
 	case TS_GRAB_PEDAL_WOT:
 		grabPedalIsWideOpen();
 		return;
+	case TS_GRAB_TPS_CLOSED:
+		grapTps1PrimaryIsClosed();
+		return;
+	case TS_GRAB_TPS_OPEN:
+		grapTps1PrimaryIsOpen();
+		return;
 	case TS_RESET_TLE8888:
 		#if (BOARD_TLE8888_COUNT > 0)
 			tle8888_req_init();
 		#endif
+		return;
+	case TS_TCU_UPSHIFT_REQUEST:
+	case TS_TCU_DOWNSHIFT_REQUEST:
+	  // do nothing, we are catching with Lua
+	  // this is temporary uaDASH API
 		return;
 	case TS_RESET_MC33810:
 		#if EFI_PROD_CODE && (BOARD_MC33810_COUNT > 0)
@@ -542,7 +568,7 @@ static void handleCommandX14(uint16_t index) {
 	case TS_ETB_STOP_AUTOTUNE:
 			engine->etbAutoTune = false;
 			#if EFI_TUNER_STUDIO
-				engine->outputChannels.calibrationMode = (uint8_t)TsCalMode::None;
+				tsCalibrationSetIdle();
 			#endif // EFI_TUNER_STUDIO
 		return;
 	case TS_ETB_DISABLE_JAM_DETECT:
@@ -556,8 +582,9 @@ static void handleCommandX14(uint16_t index) {
 		return;
 #endif // EFI_ELECTRONIC_THROTTLE_BODY
 	case TS_WIDEBAND_UPDATE:
+	case TS_WIDEBAND_UPDATE_FILE:
 		// broadcast, for old WBO FWs
-		requestWidebandUpdate(0xff);
+		requestWidebandUpdate(0xff, index == TS_WIDEBAND_UPDATE_FILE);
 		return;
 	case COMMAND_X14_UNUSED_15:
 		return;
@@ -594,7 +621,8 @@ static void applyPreset(int index) {
 #endif // EFI_TUNER_STUDIO
 }
 
-PUBLIC_API_WEAK void boardTsAction(uint16_t index) { }
+// placeholder to force custom_board_ts_command migration
+void boardTsAction(uint16_t index) { UNUSED(index); }
 
 #if EFI_CAN_SUPPORT
 /**
@@ -618,9 +646,12 @@ static void processCanUserControl(const CANRxFrame& frame) {
       };
 
 static void processCanSetCalibration(const CANRxFrame& frame) {
-// todo
+	// todo allow changes of scalar settings via CANbus
+	UNUSED(frame);
 }
 /**
+ * CANbus protocol to query scalar calibrations using hash keys
+ *
  * see fields_api.txt for well-known fields
  * see generated_fields_api_header.h for corresponding hashes
  */
@@ -629,7 +660,7 @@ static void processCanRequestCalibration(const CANRxFrame& frame) {
   int hash = getFourBytesLsb(frame, 2);
   efiPrintf("processCanRequestCalibration=%x", hash);
   FloatIntBytes fb;
-  fb.f = getOutputValueByHash(hash);
+  fb.f = getConfigValueByHash(hash);
 
 	CanTxMessage msg(CanCategory::BENCH_TEST, (int)bench_test_packet_ids_e::ECU_GET_CALIBRATION, 8, /*bus*/0, /*isExtended*/true);
   for (size_t i = 0;i<sizeof(float);i++) {
@@ -660,6 +691,8 @@ void processCanEcuControl(const CANRxFrame& frame) {
 }
 
 #endif // EFI_CAN_SUPPORT
+
+std::optional<setup_custom_board_ts_command_override_type> custom_board_ts_command;
 
 void executeTSCommand(uint16_t subsystem, uint16_t index) {
 	efiPrintf("IO test subsystem=%d index=%d", subsystem, index);
@@ -721,18 +754,30 @@ void executeTSCommand(uint16_t subsystem, uint16_t index) {
 			setWidebandOffset(hwIndex, canIndex);
 		}
 		break;
+	case TS_WIDEBAND_SET_SENS_BY_ID:
+		{
+			uint8_t hwIndex = index >> 8;
+			uint8_t sensType = index & 0xff;
+
+			// Hack until we fix canReWidebandHwIndex and set "Broadcast" to 0xff
+			// TODO:
+			hwIndex = hwIndex < 8 ? hwIndex : 0xff;
+			setWidebandSensorType(hwIndex, sensType);
+		}
+		break;
 	case TS_WIDEBAND_PING_BY_ID:
 		pingWideband(index >> 8);
 		break;
 
 	case TS_WIDEBAND_FLASH_BY_ID:
+	case TS_WIDEBAND_FLASH_BY_ID_FILE:
 		{
 			uint8_t hwIndex = index >> 8;
 
 			// Hack until we fix canReWidebandHwIndex and set "Broadcast" to 0xff
 			// TODO:
 			widebandUpdateHwId = hwIndex < 8 ? hwIndex : 0xff;
-			requestWidebandUpdate(widebandUpdateHwId);
+			requestWidebandUpdate(widebandUpdateHwId, subsystem == TS_WIDEBAND_FLASH_BY_ID_FILE);
 		}
 		break;
 #endif // EFI_CAN_SUPPORT
@@ -745,14 +790,17 @@ void executeTSCommand(uint16_t subsystem, uint16_t index) {
 		break;
 
   case TS_BOARD_ACTION:
-    boardTsAction(index);
+      // TODO: use call_board_override
+	  if (custom_board_ts_command.has_value()) {
+		  custom_board_ts_command.value()(subsystem, index);
+	  }
 		break;
 
 	case TS_SET_DEFAULT_ENGINE:
 		applyPreset((int)DEFAULT_ENGINE_TYPE);
 		break;
 
-	case 0x79:
+	case TS_STOP_ENGINE:
 		doScheduleStopEngine(StopRequestedReason::TsCommand);
 		break;
 
@@ -817,7 +865,7 @@ void initBenchTest() {
 
 #if EFI_CAN_SUPPORT
 #if EFI_WIDEBAND_FIRMWARE_UPDATE
-	addConsoleActionI("update_wideband", requestWidebandUpdate);
+	addConsoleActionI("update_wideband", [](int hwIndex) { requestWidebandUpdate(hwIndex, false); });
 #endif // EFI_WIDEBAND_FIRMWARE_UPDATE
 	addConsoleActionII("set_wideband_index", [](int hwIndex, int index) { setWidebandOffset(hwIndex, index); });
 #endif // EFI_CAN_SUPPORT

@@ -6,7 +6,6 @@ import com.rusefi.core.net.ConnectionAndMeta;
 import com.rusefi.core.preferences.storage.PersistentConfiguration;
 import com.rusefi.core.ui.AutoupdateUtil;
 import com.rusefi.core.ui.FrameHelper;
-import com.rusefi.io.LinkManager;
 import com.rusefi.io.serial.BaudRateHolder;
 import com.rusefi.maintenance.*;
 import com.rusefi.ui.BasicLogoHelper;
@@ -29,8 +28,11 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static com.devexperts.logging.Logging.getLogging;
+import static com.rusefi.SerialPortType.EcuWithOpenblt;
+import static com.rusefi.SerialPortType.OpenBlt;
 import static com.rusefi.core.preferences.storage.PersistentConfiguration.getConfig;
 import static com.rusefi.ui.util.UiUtils.*;
 import static javax.swing.JOptionPane.YES_NO_OPTION;
@@ -75,6 +77,9 @@ public class StartupFrame {
     private boolean isProceeding;
     private final JLabel noPortsMessage = new JLabel();
     private final StatusAnimation status;
+    private final JButton connectButton = new JButton("Connect", new ImageIcon(getClass().getResource("/com/rusefi/connect48.png")));
+    private ProgramSelector selector;
+    private boolean firstTimeHasEcuWithOpenBlt = true;
 
     public StartupFrame(ConnectivityContext connectivityContext) {
         this.connectivityContext = connectivityContext;
@@ -111,7 +116,6 @@ public class StartupFrame {
         comboSpeeds.setToolTipText("For 'STMicroelectronics Virtual COM Port' device any speed setting would work the same");
         connectPanel.add(comboSpeeds);
 
-        final JButton connectButton = new JButton("Connect", new ImageIcon(getClass().getResource("/com/rusefi/connect48.png")));
         setToolTip(connectButton, "Connect to real hardware");
 
         JCheckBoxMenuItem menuItem = new JCheckBoxMenuItem("Always auto-connect port");
@@ -171,7 +175,7 @@ public class StartupFrame {
         realHardwarePanel.add(noPortsMessage, "right, wrap");
         noPortsMessage.setToolTipText("Check you cables. Check your drivers. Do you want to start simulator maybe?");
 
-        ProgramSelector selector = new ProgramSelector(connectivityContext, portsComboBox.getComboPorts());
+        selector = new ProgramSelector(connectivityContext, portsComboBox.getComboPorts());
 
         realHardwarePanel.add(new HorizontalLine(), "right, wrap");
         realHardwarePanel.add(selector.getControl(), "right, wrap");
@@ -197,6 +201,8 @@ public class StartupFrame {
             frame.pack();
         }));
 
+        /*
+        LOG_VIEWER is a bit dead, is not it?
         final JButton buttonLogViewer = new JButton();
         buttonLogViewer.setText("Start " + LinkManager.LOG_VIEWER);
         buttonLogViewer.addActionListener(new ActionListener() {
@@ -209,14 +215,14 @@ public class StartupFrame {
 
         miscPanel.add(buttonLogViewer, "wrap");
         miscPanel.add(new HorizontalLine(), "wrap");
-
+*/
         miscPanel.add(SimulatorHelper.createSimulatorComponent(this));
 
         JPanel rightPanel = new JPanel(new VerticalFlowLayout());
 
         if (ConsoleBundleUtil.readBundleFullNameNotNull().getTarget().contains("proteus_f7")) {
             String text = "WARNING: Proteus F7";
-            URLLabel urlLabel = new URLLabel(text, "https://github.com/rusefi/rusefi/wiki/F7-requires-full-erase");
+            URLLabel urlLabel = new URLLabel(text, "https://wiki.rusefi.com/F7-requires-full-erase");
             new Timer(500, new ActionListener() {
                 int counter;
                 @Override
@@ -318,6 +324,10 @@ public class StartupFrame {
         return jLabel;
     }
 
+    private boolean hasOnlyBltConnected(List<PortResult> ports){
+        return ports.stream().allMatch(portResult -> portResult.type == OpenBlt);
+    }
+
     private void applyKnownPorts(AvailableHardware currentHardware) {
         List<PortResult> ports = currentHardware.getKnownPorts();
         log.info("Rendering available ports: " + ports);
@@ -331,10 +341,17 @@ public class StartupFrame {
             noPortsMessage.setText("Make sure you are disconnected from TunerStudio");
         }
 
+        connectButton.setEnabled(!hasOnlyBltConnected(ports));
+
         noPortsMessage.setVisible(ports.isEmpty() || !hasEcuOrBootloader);
 
+        boolean hasEcuWithOpenBlt = !currentHardware.getKnownPorts().stream().filter(portResult -> portResult.type == EcuWithOpenblt).collect(Collectors.toList()).isEmpty();
+        if (hasEcuWithOpenBlt && firstTimeHasEcuWithOpenBlt) {
+            selector.setMode(UpdateMode.OPENBLT_AUTO);
+            firstTimeHasEcuWithOpenBlt = false;
+        }
 
-        AutoupdateUtil.trueLayout(connectPanel);
+        AutoupdateUtil.trueLayoutAndRepaint(connectPanel);
     }
 
     public static void setFrameIcon(Frame frame) {
@@ -402,7 +419,7 @@ public class StartupFrame {
             comboPorts.setSelectedItem(defaultPort);
         }
 
-        AutoupdateUtil.trueLayout(comboPorts);
+        AutoupdateUtil.trueLayoutAndRepaint(comboPorts);
         return hasEcuOrBootloader;
     }
 

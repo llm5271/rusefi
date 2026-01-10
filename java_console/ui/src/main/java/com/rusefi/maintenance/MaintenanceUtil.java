@@ -25,15 +25,16 @@ public class MaintenanceUtil {
             ExecHelper.executeCommand(queryCommand, callbacks, output, error, null);
         } catch (ErrorExecutingCommand e) {
             log.error("Error: " + e, e);
-            callbacks.logLine("IOError: " + e);
+            callbacks.logLine("detectDevice IOError: " + e);
             // let's assume DFU is present just to give user more options
             return valueInCaseOfError;
         }
         callbacks.logLine(output.toString());
         callbacks.logLine(error.toString());
         long cost = System.currentTimeMillis() - now;
-        log.info("detectDevice lookup cost " + cost + "ms");
-        log.info(queryCommand + " says " + output);
+        String duration = "detectDevice lookup cost " + cost + "ms; ";
+        String nicerOutput = output.length() == 0 ? "(empty)" : output.toString();
+        log.info(duration + queryCommand + " says " + nicerOutput);
         return output.toString().contains(pattern);
     }
 

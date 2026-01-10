@@ -6,12 +6,10 @@ extern "C" {
 }
 
 void CpuInit() { }
-void CopInit() { }
 
 void TimerInit() { }
 void TimerReset() { }
 
-void CopService() { }
 void TimerUpdate() { }
 
 // See also STM32_NOCACHE_ENABLE option will enable MPU init

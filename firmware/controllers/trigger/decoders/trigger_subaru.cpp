@@ -164,24 +164,13 @@ void initializeSubaru7_6_camOnly(TriggerWaveform *s) {
 	s->initialize(FOUR_STROKE_CAM_SENSOR, SyncEdge::RiseOnly);
 
 	const float width = 1;
-	const float offset = 720 - 560;
+	const float offset = 720 - (3 * 180 + 20);
 
-	s->tdcPosition = 560 + offset;
+	s->tdcPosition = 180 + offset;
 
-	int i = 0;
-	float last = offset - 165;
-	float pre_last = offset - 165 - 165;
-
-	#define SUBARU76_CAMONLY_PULSE(cyl, subtooth) do { \
-		float tooth = offset + (180 * (cyl)) + 20 + (15 * (subtooth)) - width; \
+	#define SUBARU76_CAMONLY_PULSE(cyl, subtooth) \
 		s->addEventAngle(offset + (180 * (cyl)) + 20 + (15 * (subtooth)) - width, TriggerValue::RISE, TriggerWheel::T_PRIMARY);	\
-		s->addEventAngle(offset + (180 * (cyl)) + 20 + (15 * (subtooth)), TriggerValue::FALL, TriggerWheel::T_PRIMARY); \
-		printf("tooth at %f\n", offset + (180 * (cyl)) + 20 + (15 * (subtooth))); \
-		printf(" k = %f\n", (tooth - last) / (last - pre_last)); \
-		pre_last = last; \
-		last = tooth; \
-		i++; \
-	} while(0)
+		s->addEventAngle(offset + (180 * (cyl)) + 20 + (15 * (subtooth)), TriggerValue::FALL, TriggerWheel::T_PRIMARY)
 
 	// CYL1
 	// 5, 20, 35
@@ -233,7 +222,7 @@ void initializeSubaru7_6_crankOnly(TriggerWaveform *s) {
 	const float width = 1;
 	const float offset = 10;
 
-	s->tdcPosition = -65 - offset;
+	s->tdcPosition = 65;
 
 	// BTDC: 97, 65, 10
 	// Distances: 93, 32, 55

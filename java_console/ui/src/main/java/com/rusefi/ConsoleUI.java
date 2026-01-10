@@ -37,6 +37,7 @@ import static com.devexperts.logging.Logging.getLogging;
 import static com.rusefi.StartupFrame.setFrameIcon;
 import static com.rusefi.core.preferences.storage.PersistentConfiguration.getConfig;
 import static com.rusefi.core.rusEFIVersion.CONSOLE_VERSION;
+import static com.rusefi.ui.basic.UiHelper.commonUiStartup;
 import static com.rusefi.ui.util.UiUtils.createOnTopParent;
 
 /**
@@ -45,7 +46,7 @@ import static com.rusefi.ui.util.UiUtils.createOnTopParent;
 public class ConsoleUI {
     private static final Logging log = getLogging(ConsoleUI.class);
     private static final int DEFAULT_TAB_INDEX = 0;
-    private static final String WIKI_URL = "https://github.com/rusefi/rusefi/wiki/rusEFI-logs-folder";
+    private static final String WIKI_URL = "https://wiki.rusefi.com/rusEFI-logs-folder";
 
     public static final String TAB_INDEX = "main_tab";
     protected static final String PORT_KEY = "port";
@@ -135,7 +136,11 @@ public class ConsoleUI {
 //        if (!linkManager.isLogViewer())
 //            tabbedPane.addTab("Settings", tabbedPane.settingsTab.createPane());
         if (!linkManager.isLogViewer()) {
+/*
+console live data tab is broken #8402
+
             tabbedPane.addTab("Live Data", LiveDataPane.createLazy(uiContext).getContent());
+ */
             tabbedPane.addTab("Sensors Live Data", new SensorsLiveDataPane(uiContext).getContent());
         }
 
@@ -201,12 +206,9 @@ public class ConsoleUI {
             new Thread(ConsoleUI::writeReadmeFile).start();
         }
 
-        log.info("OS name: " + FileLog.getOsName());
-        log.info("OS version: " + System.getProperty(FileLog.OS_VERSION));
-
         getConfig().load();
         AutotestLogging.suspendLogging = getConfig().getRoot().getBoolProperty(GaugesPanel.DISABLE_LOGS);
-        DefaultExceptionHandler.install();
+        commonUiStartup();
 // not very useful?        VersionChecker.start();
         SwingUtilities.invokeAndWait(() -> awtCode(args));
     }

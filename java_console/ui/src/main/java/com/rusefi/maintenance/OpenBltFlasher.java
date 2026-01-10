@@ -1,5 +1,6 @@
 package com.rusefi.maintenance;
 
+import com.devexperts.logging.Logging;
 import com.rusefi.libopenblt.XcpLoader;
 import com.rusefi.libopenblt.XcpSettings;
 import com.rusefi.libopenblt.file.SrecParser;
@@ -12,7 +13,11 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+import static com.devexperts.logging.Logging.getLogging;
+
 public class OpenBltFlasher {
+    private static final Logging log = getLogging(OpenBltFlasher.class);
+
     private final XcpLoader mLoader;
     private final OpenbltJni.OpenbltCallbacks mCallbacks;
 
@@ -25,6 +30,7 @@ public class OpenBltFlasher {
     }
 
     public static OpenBltFlasher makeSerial(String portName, XcpSettings settings, OpenbltJni.OpenbltCallbacks callbacks) {
+        log.info("makeSerial " + portName);
         IXcpTransport transport = new XcpSerial(portName);
         return new OpenBltFlasher(transport, settings, callbacks);
     }
@@ -32,6 +38,11 @@ public class OpenBltFlasher {
     public static OpenBltFlasher makeTcp(String hostname, int port, XcpSettings settings, OpenbltJni.OpenbltCallbacks callbacks) {
         IXcpTransport transport = new XcpNet(hostname, port);
         return new OpenBltFlasher(transport, settings, callbacks);
+    }
+
+    public static void flashSerial(String fileName, String port, OpenbltJni.OpenbltCallbacks callbacks) throws IOException {
+        OpenBltFlasher f = OpenBltFlasher.makeSerial(port, new XcpSettings(), callbacks);
+        f.flash(fileName);
     }
 
     public void flash(String filename) throws IOException {
@@ -91,7 +102,7 @@ public class OpenBltFlasher {
         mCallbacks.setPhase("Erase", true);
         final ProgressUpdater pu = new ProgressUpdater();
 
-        forEachFirmwareChunk(65536, (Chunk c) -> {
+        forEachFirmwareChunk(32768, (Chunk c) -> {
             mLoader.clearMemory(c.address, c.data.length);
 
             pu.processBytes(c.data.length);
@@ -102,7 +113,7 @@ public class OpenBltFlasher {
         mCallbacks.setPhase("Program", true);
         final ProgressUpdater pu = new ProgressUpdater();
 
-        forEachFirmwareChunk(200, (Chunk c) -> {
+        forEachFirmwareChunk(1024, (Chunk c) -> {
             mLoader.writeData(c.address, c.data);
 
             pu.processBytes(c.data.length);

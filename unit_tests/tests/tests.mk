@@ -1,5 +1,6 @@
 TESTS_SRC_CPP = \
 	tests/ltft_sandbox.cpp \
+	tests/log_replay_sandbox.cpp \
 	tests/trigger/test_all_triggers.cpp \
 	tests/trigger/test_trigger_sequence_finder.cpp \
 	tests/trigger/test_2_stroke.cpp \
@@ -93,6 +94,7 @@ TESTS_SRC_CPP = \
 	tests/test_fft.cpp \
 	tests/lua/test_lua_basic.cpp \
 	tests/lua/test_bit_range_msb.cpp \
+	tests/lua/test_bit_range.cpp \
 	tests/lua/test_lua_dbc.cpp \
 	tests/lua/test_motorola_dbc.cpp \
 	tests/lua/test_lua_bit_range_msb.cpp \
@@ -143,6 +145,7 @@ TESTS_SRC_CPP = \
 	tests/test_sticky_pps.cpp \
 	tests/test_knock.cpp \
 	tests/test_lambda_monitor.cpp \
+	tests/test_flex_sensor.cpp \
 	tests/sensor/basic_sensor.cpp \
 	tests/sensor/func_sensor.cpp \
 	tests/sensor/function_pointer_sensor.cpp \
@@ -165,6 +168,7 @@ TESTS_SRC_CPP = \
 	tests/test_dynoview.cpp \
 	tests/test_gpio.cpp \
 	tests/test_limp.cpp \
+	tests/test_tcu.cpp \
 	tests/test_hellen_board_id.cpp \
 	tests/sensor/test_frequency_sensor.cpp \
 	tests/sensor/test_turbocharger_speed_converter.cpp \
@@ -200,4 +204,11 @@ TESTS_SRC_CPP = \
 	tests/controllers/algo/test_engine_cylinder.cpp \
 	tests/controllers/algo/test_closed_loop_idle.cpp \
 	tests/controllers/modules/test_example_module.cpp \
-	tests/controllers/test_flash.cpp
+	tests/controllers/test_flash.cpp \
+	tests/controllers/modules/vvl_controller/vvl_controller_rpm_condition.cpp \
+	tests/controllers/modules/vvl_controller/vvl_controller_clt_condition.cpp \
+	tests/controllers/modules/vvl_controller/vvl_controller_tps_condition.cpp \
+	tests/controllers/modules/vvl_controller/vvl_controller_map_condition.cpp \
+	tests/controllers/modules/vvl_controller/vvl_controller_afr_condition.cpp \
+	tests/controllers/modules/test_configuration_wizard.cpp \
+	tests/controllers/can/dash/test_can_bmw_e46.cpp

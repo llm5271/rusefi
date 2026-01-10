@@ -37,6 +37,7 @@ public class ConfigDefinition {
     private static final String KEY_BOARD_NAME = "-board";
     public static final String CONFIG_PATH = "java_tools/configuration_definition/src/main/resources/config_definition.options";
     public static final String READFILE_OPTION = "-readfile";
+    public static final String KEY_ENUMS_CONFIG_PATH = "-enumsConfig";
 
     public static void main(String[] args) {
         try {
@@ -52,7 +53,12 @@ public class ConfigDefinition {
                 );
                 return;
             }
-            doJob(totalArgs, new ReaderStateImpl());
+            ReaderStateImpl state = new ReaderStateImpl();
+            doJob(totalArgs, state);
+            int frenchBooleanNameLimit = Integer.parseInt(state.getVariableRegistry().get("TRUE_FALSE_COUNT_LIMIT"));
+            if (state.getDefaultBitNameCounter() > frenchBooleanNameLimit) {
+                throw new IllegalStateException("We are trying to reduce inhumane true/false bitNames: " + state.getDefaultBitNameCounter());
+            }
         } catch (Throwable e) {
             log.error("unexpected", e);
             e.printStackTrace();
@@ -64,7 +70,7 @@ public class ConfigDefinition {
         log.info(ConfigDefinition.class + " Invoked with " + Arrays.toString(args));
 
         String tsInputFileFolder = null;
-        List<String> softPrePrendsFileNames = new ArrayList<>();
+        List<String> softPrePrependsFileNames = new ArrayList<>();
 
         DefinitionsState parseState = state.getEnumsReader().parseState;
         String signatureDestination = null;
@@ -136,7 +142,7 @@ public class ConfigDefinition {
                     break;
                 case KEY_SOFT_PREPEND: {
                     String softPrependFileName = args[i + 1].trim();
-                    softPrePrendsFileNames.add(softPrependFileName);
+                    softPrePrependsFileNames.add(softPrependFileName);
                     state.addSoftPrepend(softPrependFileName);
                 }
                     break;
@@ -168,12 +174,17 @@ public class ConfigDefinition {
                     for (String inputFile : pinoutLogic.getInputFiles())
                         state.addInputFile(inputFile);
                     break;
+                case KEY_ENUMS_CONFIG_PATH:
+                    String enumsDefinitionsFilePath = args[i + 1];
+                    String enumsDefinitionsFilePathFixed = IoUtil3.prependIfNotAbsolute(RootHolder.ROOT, enumsDefinitionsFilePath);
+                    ExtraUtil.handleEnumsDefinitions(enumsDefinitionsFilePathFixed, state);
+                    break;
             }
         }
 
         FieldsApiGenerator.run();
-        handlePage(state, 1, softPrePrendsFileNames);
-        handlePage(state, 2, softPrePrendsFileNames);
+        handlePage(state, 1, softPrePrependsFileNames);
+        handlePage(state, 2, softPrePrependsFileNames);
 
         if (tsInputFileFolder != null) {
             // used to update .ini files

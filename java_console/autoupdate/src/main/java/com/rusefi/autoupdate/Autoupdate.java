@@ -3,26 +3,22 @@ package com.rusefi.autoupdate;
 import com.devexperts.logging.FileLogger;
 import com.devexperts.logging.Logging;
 import com.rusefi.core.FindFileHelper;
+import com.rusefi.core.io.BundleInfo;
+import com.rusefi.core.io.BundleInfoStrategy;
 import com.rusefi.core.io.BundleUtil;
 import com.rusefi.core.net.ConnectionAndMeta;
 import com.rusefi.core.FileUtil;
+import com.rusefi.core.net.PropertiesHolder;
 import com.rusefi.core.rusEFIVersion;
 import com.rusefi.core.ui.AutoupdateUtil;
 import com.rusefi.core.ui.ErrorMessageHelper;
 import org.jetbrains.annotations.NotNull;
 
-import javax.swing.*;
 import java.io.*;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.MalformedURLException;
-import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.function.Predicate;
 import java.util.zip.ZipEntry;
 
@@ -32,7 +28,17 @@ import static com.rusefi.core.FindFileHelper.findFirmwareFile;
 
 public class Autoupdate {
     private static final Logging log = getLogging(Autoupdate.class);
-    private static final int AUTOUPDATE_VERSION = 20250618; // separate from rusEFIVersion#CONSOLE_VERSION
+    private static final int AUTOUPDATE_VERSION = 20260101; // separate from rusEFIVersion#CONSOLE_VERSION
+    private static final String DO_NOT_UPDATE_PROPERTY_KEY = "Autoupdate.do_not_download";
+    private static final boolean doNotDownloadPropertyValue;
+    private static final String SUPPRESS_FILE_NAME = FileUtil.RUSEFI_SETTINGS_FOLDER + "donotdownload";
+    private static final boolean suppressDownloadViaFlagFile = new File(SUPPRESS_FILE_NAME).exists();
+
+    static {
+        doNotDownloadPropertyValue = Boolean.getBoolean(DO_NOT_UPDATE_PROPERTY_KEY);
+        log.info(DO_NOT_UPDATE_PROPERTY_KEY + "=" + doNotDownloadPropertyValue);
+        log.info(SUPPRESS_FILE_NAME + " exists: " + suppressDownloadViaFlagFile);
+    }
 
     private static final String TITLE = getTitle();
 
@@ -44,10 +50,6 @@ public class Autoupdate {
             return "Title error: " + e;
         }
     }
-
-    private static final String COM_RUSEFI_LAUNCHER = "com.rusefi.Launcher";
-
-
 
     public static void main(String[] args) {
         try {
@@ -80,16 +82,21 @@ public class Autoupdate {
 
     // everything here assumes Windows. Sorry!
     private static void autoupdate(String[] args) {
-        BundleUtil.BundleInfo bundleInfo = BundleUtil.readBundleFullNameNotNull();
-        if (BundleUtil.BundleInfo.isUndefined(bundleInfo)) {
+        BundleInfo bundleInfo = BundleUtil.readBundleFullNameNotNull();
+        if (BundleInfo.isUndefined(bundleInfo)) {
             log.error("ERROR: Autoupdate: unable to perform without bundleFullName");
             System.exit(-1);
         }
 
         @NotNull String firstArgument = args.length > 0 ? args[0] : "";
 
-        final Optional<DownloadedAutoupdateFileInfo> downloadedAutoupdateFile = downloadFreshZipFile(firstArgument, bundleInfo);
-        downloadedAutoupdateFile.ifPresent(downloadedFile -> ObsoleteFilesArchiver.INSTANCE.archiveObsoleteFiles());
+        final Optional<DownloadedAutoupdateFileInfo> downloadedAutoupdateFile;
+        if (doNotDownloadPropertyValue || suppressDownloadViaFlagFile) {
+            downloadedAutoupdateFile = Optional.empty();
+        } else {
+            downloadedAutoupdateFile = downloadFreshZipFile(firstArgument, bundleInfo);
+            downloadedAutoupdateFile.ifPresent(downloadedFile -> ObsoleteFilesArchiver.INSTANCE.archiveObsoleteFiles());
+        }
 
         // Let's try to get console .exe-file name before we rewrite autoupdate .jar file:
         final String consoleExeFileName = new ConsoleExeFileLocator().getConsoleExeFileName();
@@ -101,15 +108,14 @@ public class Autoupdate {
         startConsoleAsANewProcess(consoleExeFileName, args);
     }
 
-    private static Optional<DownloadedAutoupdateFileInfo> downloadFreshZipFile(String firstArgument, BundleUtil.BundleInfo bundleInfo) {
+    private static Optional<DownloadedAutoupdateFileInfo> downloadFreshZipFile(String firstArgument, BundleInfo bundleInfo) {
         Optional<DownloadedAutoupdateFileInfo> downloadedAutoupdateFile;
         if (firstArgument.equalsIgnoreCase("release")) {
             // this branch needs progress for custom boards!
             log.info("Release update requested");
             downloadedAutoupdateFile = downloadAutoupdateZipFile(
                 bundleInfo,
-                ConnectionAndMeta.BASE_URL_RELEASE
-            );
+                ConnectionAndMeta.BASE_URL_RELEASE, FindFileHelper.isObfuscated());
         } else {
             downloadedAutoupdateFile = doDownload(bundleInfo);
         }
@@ -120,6 +126,7 @@ public class Autoupdate {
         // todo: we still have technical debt here! https://github.com/rusefi/rusefi/issues/7971
         downloadedAutoupdateFile.ifPresent(Autoupdate::unzipFreshConsole);
         downloadedAutoupdateFile.ifPresent(autoupdateFile -> {
+            findSrecFile(false); // move all current copies into older fw folder
             try {
                 String pathname = "..";
                 log.info("unzipping everything else into " + pathname);
@@ -130,6 +137,8 @@ public class Autoupdate {
                 final String firmwareFile = findFirmwareFile();
                 new File(srecFile == null ? firmwareFile : srecFile)
                     .setLastModified(autoupdateFile.lastModified);
+
+                tryInstallTsPlugin();
             } catch (IOException e) {
                 log.error("Error unzipping autoupdate from bundle: " + e);
                 if (!AutoupdateUtil.runHeadless) {
@@ -137,6 +146,14 @@ public class Autoupdate {
                 }
             }
         });
+    }
+
+    private static void tryInstallTsPlugin() {
+        try {
+            TsPluginInstaller.installTsPlugin();
+        } catch (NoClassDefFoundError e) {
+            log.warn("Error installTsPlugin: " + e);
+        }
     }
 
     private static void unzipFreshConsole(DownloadedAutoupdateFileInfo autoupdateFile) {
@@ -159,60 +176,9 @@ public class Autoupdate {
 
     private static final Predicate<ZipEntry> isConsoleJar = zipEntry -> consoleJarZipEntry.equals(zipEntry.getName());
 
-    private static Optional<DownloadedAutoupdateFileInfo> doDownload(final BundleUtil.BundleInfo bundleInfo) {
-        if (bundleInfo.isMaster()) {
-            log.info("Snapshot requested");
-            return downloadAutoupdateZipFile(bundleInfo, ConnectionAndMeta.getBaseUrl() + ConnectionAndMeta.AUTOUPDATE);
-        } else {
-            final String branchName = selectBranchName(bundleInfo);
-            return downloadAutoupdateZipFile(bundleInfo, ConnectionAndMeta.getBaseUrl() + "/lts/" + branchName + ConnectionAndMeta.AUTOUPDATE);
-        }
-    }
-
-    private static String selectBranchName(BundleUtil.BundleInfo bundleInfo) {
-        final String branchName = bundleInfo.getBranchName();
-        final String nextBranchName = bundleInfo.getNextBranchName();
-        if (nextBranchName != null && !nextBranchName.isBlank()) {
-            if (JOptionPane.showConfirmDialog(
-                null,
-                String.format("A new version `%s` is available!\nWould you like to update from `%s` to `%s` now?",
-                    nextBranchName,
-                    branchName,
-                    nextBranchName
-                ),
-                "Release selection",
-                JOptionPane.YES_NO_OPTION
-            ) == JOptionPane.YES_OPTION) {
-                return nextBranchName;
-            }
-        }
-        return branchName;
-    }
-
-    private static URLClassLoader prepareClassLoaderToStartConsole() {
-        final URLClassLoader jarClassLoader;
-        String consoleJarFileName = ConnectionAndMeta.getRusEfiConsoleJarName();
-        if (!new File(consoleJarFileName).exists()) {
-            throw log.log(new RuntimeException("Looks like corrupted installation: " + consoleJarFileName + " not found"));
-        }
-
-        try {
-            jarClassLoader = AutoupdateUtil.getClassLoaderByJar(consoleJarFileName);
-        } catch (MalformedURLException e) {
-            log.error("Failed to start", e);
-            throw new IllegalStateException("Problem with " + consoleJarFileName, e);
-        }
-        // we want to make sure that files are available to write so we use reflection to get lazy class initialization
-        // since we are overriding file we cannot just use static java classpath while launching
-        try {
-            hackProperties(jarClassLoader);
-        } catch (ClassNotFoundException e) {
-            throw log.log(new IllegalStateException("Class not found: " + e, e));
-        } catch (NoSuchMethodException | InvocationTargetException |
-                 IllegalAccessException e) {
-            throw log.log(new IllegalStateException("Failed to update properties: " + e, e));
-        }
-        return jarClassLoader;
+    private static Optional<DownloadedAutoupdateFileInfo> doDownload(final BundleInfo bundleInfo) {
+        String branchUrl = BundleInfoStrategy.getDownloadUrl(bundleInfo, PropertiesHolder.getBaseUrl(), BundleInfoStrategy::selectBranchName);
+        return downloadAutoupdateZipFile(bundleInfo, branchUrl, FindFileHelper.isObfuscated());
     }
 
     private static void startConsoleAsANewProcess(final String consoleExeFileName, final String[] args) {
@@ -243,16 +209,7 @@ public class Autoupdate {
         }
     }
 
-    private static void hackProperties(URLClassLoader jarClassLoader) throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        // in case of fresh jar file for some reason we are failing with ZipException if executed within console domain
-        Class uiProperties = Class.forName("com.rusefi.UiProperties", true, jarClassLoader);
-        for (Method m : uiProperties.getMethods())
-            System.out.println(m);
-        Method setter = uiProperties.getMethod("setProperties", Properties.class);
-        setter.invoke(null, ConnectionAndMeta.getProperties());
-    }
-
-    private static class DownloadedAutoupdateFileInfo {
+    public static class DownloadedAutoupdateFileInfo {
         final String zipFileName;
         final long lastModified;
 
@@ -262,18 +219,27 @@ public class Autoupdate {
         }
     }
 
-    private static Optional<DownloadedAutoupdateFileInfo> downloadAutoupdateZipFile(
-        final BundleUtil.BundleInfo info,
-        final String baseUrl
-    ) {
+    /**
+     * @return empty if we already have latest, or in case of error
+     */
+    public static Optional<DownloadedAutoupdateFileInfo> downloadAutoupdateZipFile(
+        final BundleInfo info,
+        final String baseUrl,
+        boolean isObfuscated) {
         try {
-            String suffix = FindFileHelper.isObfuscated() ? "_obfuscated_public" : "";
-            String zipFileName = ConnectionAndMeta.getWhiteLabel(ConnectionAndMeta.getProperties()) + "_bundle_" + info.getTarget() + suffix + "_autoupdate" + ".zip";
-            ConnectionAndMeta connectionAndMeta = new ConnectionAndMeta(zipFileName).invoke(baseUrl);
-            log.info("Remote file " + zipFileName);
+            String suffix = isObfuscated ? "_obfuscated_public" : "";
+            String folderName = info.getTarget() + "_" + info.getBranchName();
+            String localFolder = FileUtil.RUSEFI_SETTINGS_FOLDER + "updates" + File.separator + folderName + File.separator;
+            new File(localFolder).mkdirs();
+
+            String fileName = ConnectionAndMeta.getWhiteLabel(ConnectionAndMeta.getProperties()) + "_bundle_" + info.getTarget() + suffix + "_autoupdate" + ".zip";
+            String localZipFileName = localFolder + fileName;
+            ConnectionAndMeta connectionAndMeta = new ConnectionAndMeta(fileName).invoke(baseUrl);
+            log.info("Local file " + localZipFileName);
+            log.info("Remote file " + fileName);
             log.info("Server has " + connectionAndMeta.getCompleteFileSize() + " from " + new Date(connectionAndMeta.getLastModified()));
 
-            if (AutoupdateUtil.hasExistingFile(zipFileName, connectionAndMeta.getCompleteFileSize(), connectionAndMeta.getLastModified())) {
+            if (AutoupdateUtil.hasExistingFile(localZipFileName, connectionAndMeta.getCompleteFileSize(), connectionAndMeta.getLastModified())) {
                 log.info("We already have latest update " + new Date(connectionAndMeta.getLastModified()));
                 return Optional.empty();
             }
@@ -284,13 +250,13 @@ public class Autoupdate {
 
             log.info(info + " " + completeFileSize + " bytes, last modified " + new Date(lastModified));
 
-            AutoupdateUtil.downloadAutoupdateFile(zipFileName, connectionAndMeta, TITLE);
+            AutoupdateUtil.downloadAutoupdateFile(localZipFileName, connectionAndMeta, TITLE);
 
-            File file = new File(zipFileName);
+            File file = new File(localZipFileName);
             file.setLastModified(lastModified);
             log.info("Downloaded " + file.length() + " bytes, lastModified=" + lastModified);
 
-            return Optional.of(new DownloadedAutoupdateFileInfo(zipFileName, lastModified));
+            return Optional.of(new DownloadedAutoupdateFileInfo(localZipFileName, lastModified));
         } catch (ReportedIOException e) {
             // we had already reported error with a UI dialog when we had parent frame
             log.error("Error downloading bundle: " + e);

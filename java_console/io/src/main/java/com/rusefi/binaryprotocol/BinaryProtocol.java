@@ -7,7 +7,6 @@ import com.opensr5.ConfigurationImage;
 import com.opensr5.ConfigurationImageWithMeta;
 import com.opensr5.ini.IniFileModel;
 import com.opensr5.ini.field.OrdinalOutOfRangeException;
-import com.opensr5.io.ConfigurationImageFile;
 import com.opensr5.io.DataListener;
 import com.rusefi.ConfigurationImageDiff;
 import com.rusefi.NamedThreadFactory;
@@ -19,7 +18,6 @@ import com.rusefi.core.SensorCentral;
 import com.rusefi.core.net.ConnectionAndMeta;
 import com.rusefi.io.*;
 import com.rusefi.io.commands.*;
-import com.rusefi.tune.xml.Msq;
 import com.rusefi.ui.livedocs.LiveDocsRegistry;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -35,6 +33,7 @@ import java.util.concurrent.*;
 import static com.devexperts.logging.Logging.getLogging;
 import static com.rusefi.binaryprotocol.IoHelper.*;
 import static com.rusefi.config.generated.VariableRegistryValues.*;
+import static com.rusefi.util.TuneBackupUtil.saveConfigurationImageToFiles;
 
 /**
  * This object represents logical state of physical connection.
@@ -181,7 +180,15 @@ public class BinaryProtocol {
         } catch (IOException e) {
             return "Failed to read signature " + e;
         }
-        iniFile = Objects.requireNonNull(iniFileProvider.provide(signature));
+        try {
+            iniFile = Objects.requireNonNull(iniFileProvider.provide(signature));
+        } catch (IniNotFoundException e) {
+            close();
+            return "Failed to located .ini";
+        }
+        if (isSinglePageController()) {
+            log.info("*** COMPATIBILITY MODE: older single-page firmware");
+        }
 
         int pageSize = iniFile.getMetaInfo().getPageSize(0);
         log.info("pageSize=" + pageSize);
@@ -189,7 +196,8 @@ public class BinaryProtocol {
         if (stream.isClosed())
             return "Failed to read calibration";
 
-        startPullThread(listener);
+        if (linkManager.getNeedPullData())
+            startPullThread(listener);
         binaryProtocolLogger.start();
         return null;
     }
@@ -264,7 +272,7 @@ public class BinaryProtocol {
             byte[] newBytes = newVersion.getRange(range.first, size);
             log.info("new " + Arrays.toString(newBytes));
 
-            writeData(newVersion.getContent(), range.first, range.first, size);
+            writeInBlocks(newVersion.getContent(), range.first, range.first, size);
 
             offset = range.second;
         }
@@ -283,23 +291,31 @@ public class BinaryProtocol {
      * read complete tune from physical data stream
      */
     public void readImage(final Arguments arguments, final ConfigurationImageMeta meta) {
-        ConfigurationImageWithMeta image = BinaryProtocolLocalCache.getAndValidateLocallyCached(this);
+        if (arguments.needImage) {
+            ConfigurationImageWithMeta image = BinaryProtocolLocalCache.getAndValidateLocallyCached(this);
 
-        if (image.isEmpty()) {
-            image = readFullImageFromController(arguments, meta);
-            if (image.isEmpty())
-                return;
+            if (image.isEmpty()) {
+                image = readFullImageFromController(arguments, meta);
+                if (image.isEmpty())
+                    return;
+            }
+            setConfigurationImage(image.getConfigurationImage());
+            log.info(stream + ": Got configuration from controller " + meta.getImageSize() + " byte(s)");
         }
-        setConfigurationImage(image.getConfigurationImage());
-        log.info(stream + ": Got configuration from controller " + meta.getImageSize() + " byte(s)");
         ConnectionStatusLogic.INSTANCE.setValue(ConnectionStatusValue.CONNECTED);
     }
 
     public static class Arguments {
         final boolean saveFile;
+        final boolean needImage;
+
+        public Arguments(boolean needImage, boolean saveFile) {
+            this.needImage = needImage;
+            this.saveFile = saveFile;
+        }
 
         public Arguments(final boolean saveFile) {
-            this.saveFile = saveFile;
+            this(true, saveFile);
         }
     }
 
@@ -320,17 +336,7 @@ public class BinaryProtocol {
             int remainingSize = image.getSize() - offset;
             int requestSize = Math.min(remainingSize, iniFile.getBlockingFactor());
 
-            String pageReadCommand = iniFile.getMetaInfo().getPageReadCommand(0);
-            byte[] packet;
-            if (pageReadCommand.length() == 7) {
-                // older controller, no page index in read command
-                // PS: technically we can/shall actually use command syntax as specified by the .ini
-                packet = new byte[4];
-                ByteRange.packOffsetAndSize(offset, requestSize, packet);
-            } else {
-                packet = new byte[6];
-                ByteRange.packPageOffsetAndSize(offset, requestSize, packet);
-            }
+            byte[] packet = smartPacketPrefix(offset, requestSize);
 
             byte[] response = executeCommand(Integration.TS_READ_COMMAND, packet, "load image offset=" + offset);
 
@@ -354,6 +360,25 @@ public class BinaryProtocol {
         return imageWithMeta;
     }
 
+    public byte @NotNull [] smartPacketPrefix(int offset, int requestSize) {
+        byte[] packet;
+        if (isSinglePageController()) {
+            // older controller, no page index in read command
+            // PS: technically we can/shall actually use command syntax as specified by the .ini
+            packet = new byte[4];
+            ByteRange.packOffsetAndSize(offset, requestSize, packet);
+        } else {
+            packet = new byte[6];
+            ByteRange.packPageOffsetAndSize(offset, requestSize, packet);
+        }
+        return packet;
+    }
+
+    public boolean isSinglePageController() {
+        String pageReadCommand = iniFile.getMetaInfo().getPageReadCommand(0);
+        return pageReadCommand.length() == 7;
+    }
+
     @NotNull
     private ConfigurationImageWithMeta readFullImageFromController(
         final Arguments arguments,
@@ -371,7 +396,7 @@ public class BinaryProtocol {
                 );
             } catch (JAXBException e) {
                 log.error("JAXBException", e);
-            } catch (IOException e) {
+            } catch (final IOException | OrdinalOutOfRangeException e) {
                 log.info("Ignoring " + e, e);
             } catch (Exception e) {
                 log.error("Unexpected exception:" + e, e);
@@ -379,34 +404,6 @@ public class BinaryProtocol {
             }
         }
         return imageWithMeta;
-    }
-
-    public static void saveConfigurationImageToFiles(
-        final ConfigurationImageWithMeta imageWithMeta,
-        final IniFileModel ini,
-        @Nullable final String binaryFileName,
-        @Nullable final String xmlFileName
-    ) throws JAXBException, IOException {
-        if (binaryFileName != null) {
-            ConfigurationImageFile.saveToFile(imageWithMeta, binaryFileName);
-        }
-        if (xmlFileName != null) {
-            saveXmlFile(imageWithMeta, ini, xmlFileName);
-        }
-    }
-
-    public static void saveXmlFile(ConfigurationImageWithMeta imageWithMeta, IniFileModel ini, @NotNull String xmlFileName) throws JAXBException, IOException {
-        ConfigurationImage image = imageWithMeta.getConfigurationImage();
-        if (image == null) {
-            log.warn("No image for saveConfigurationImageToFiles");
-            return;
-        }
-        try {
-            final Msq tune = MsqFactory.valueOf(image, ini);
-            tune.writeXmlFile(xmlFileName);
-        } catch (OrdinalOutOfRangeException e) {
-            log.warn("Unexpected " + e, e);
-        }
     }
 
     private static String getCode(byte[] response) {
@@ -451,10 +448,8 @@ public class BinaryProtocol {
         }
     }
 
-    private static byte[] createRequestCrcPayload(int size) {
-        byte[] packet = new byte[6];
-        ByteRange.packPageOffsetAndSize(0, size, packet);
-        return packet;
+    private byte[] createRequestCrcPayload(int size) {
+        return smartPacketPrefix(0, size);
     }
 
     public byte[] executeCommand(char opcode, String msg) {
@@ -509,10 +504,27 @@ public class BinaryProtocol {
         stream.close();
     }
 
-    public void writeData(byte[] content, int contentOffset, int ecuOffset, int size) {
+    public void writeInBlocks(byte[] content, int contentOffset, int ecuOffset, int size) {
+        int idx = 0;
+        int remaining;
+        int blockingFactor = getIniFile().getBlockingFactor();
+
+        do {
+            remaining = size - idx;
+            int thisWrite = Math.min(remaining, blockingFactor);
+
+            writeData(content, contentOffset + idx, ecuOffset + idx, thisWrite);
+
+            idx += thisWrite;
+
+            remaining -= thisWrite;
+        } while (remaining > 0);
+    }
+
+    private void writeData(byte[] content, int contentOffset, int ecuOffset, int size) {
         isBurnPending = true;
 
-        byte[] packet = WriteCommand.getWritePacket(content, contentOffset, ecuOffset, size);
+        byte[] packet = WriteCommand.getWritePacket(this, content, contentOffset, ecuOffset, size);
 
         long start = System.currentTimeMillis();
         while (!stream.isClosed() && (System.currentTimeMillis() - start < Timeouts.BINARY_IO_TIMEOUT)) {

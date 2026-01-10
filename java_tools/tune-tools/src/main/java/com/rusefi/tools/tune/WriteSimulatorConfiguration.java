@@ -13,6 +13,7 @@ import com.rusefi.tune.xml.Msq;
 
 import javax.xml.bind.JAXBException;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Objects;
@@ -21,14 +22,14 @@ import static com.devexperts.logging.Logging.getLogging;
 import static com.rusefi.tools.tune.TuneCanTool.ENGINE_TUNE_OUTPUT_FOLDER;
 
 /**
- * see <a href="https://github.com/rusefi/rusefi/wiki/Canned-Tune-Process">...</a>
+ * see <a href="https://wiki.rusefi.com/Canned-Tune-Process">...</a>
  */
 public class WriteSimulatorConfiguration {
     private static final Logging log = getLogging(WriteSimulatorConfiguration.class);
 
     private static final String ROOT_FOLDER = System.getProperty("ROOT_FOLDER", "../simulator/");
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws FileNotFoundException {
         if (args.length != 1)
             throw new IllegalArgumentException("One argument expected: .ini file name");
         String iniFileName = args[0];
@@ -61,7 +62,7 @@ public class WriteSimulatorConfiguration {
             readBinaryWriteXmlTune(iniFileName, in,
                 TuneCanTool.getDefaultTuneOutputFileName(engineType), ini);
         } catch (Throwable e) {
-            throw new IllegalStateException("With " + engineType, e);
+            throw new IllegalStateException("writeSpecificEngineType: With " + engineType, e);
         }
     }
 

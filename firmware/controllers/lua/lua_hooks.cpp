@@ -174,8 +174,7 @@ uint32_t getLuaArray(lua_State* l, int paramIndex, uint8_t *data, uint32_t size)
 
 static int validateCanChannelAndConvertFromHumanIntoZeroIndex(lua_State* l) {
 	lua_Integer channel = luaL_checkinteger(l, 1);
-	// TODO: support multiple channels
-	luaL_argcheck(l, channel == 1 || channel == 2, 1, "only buses 1 and 2 currently supported");
+	luaL_argcheck(l, channel >= 1 && channel <= EFI_CAN_BUS_COUNT, 1, "Invalid bus index");
 	return channel - HUMAN_OFFSET;
 }
 
@@ -641,6 +640,7 @@ static tinymt32_t tinymt;
 
 void configureRusefiLuaHooks(lua_State* lState) {
   boardConfigureLuaHooks(lState);
+  configureRusefiLuaHooksExt(lState);
 
   tinymt32_init(&tinymt, 1534525); // todo: share instance with launch_control? probably not?
 	lua_register(lState, "random", [](lua_State* l) {
@@ -807,7 +807,19 @@ extern int luaCommandCounters[LUA_BUTTON_COUNT];
 		engine->engineState.updateSparkSkip();
 		return 0;
 	});
+	lua_register(lState, "setLaunchTrigger", [](lua_State* l) {
+		auto value = luaL_checkinteger(l, 1);
+  	engine->launchController.luaLaunchState = value;
+		return 0;
+	});
 #endif // EFI_LAUNCH_CONTROL
+#if EFI_ANTILAG_SYSTEM
+	lua_register(lState, "setRollingIdleTrigger", [](lua_State* l) {
+		auto value = luaL_checkinteger(l, 1);
+  	engine->antilagController.luaAntilagState = value;
+		return 0;
+	});
+#endif // EFI_ANTILAG_SYSTEM
 
 #if EFI_EMULATE_POSITION_SENSORS && !EFI_UNIT_TEST
 	lua_register(lState, "selfStimulateRPM", [](lua_State* l) {
@@ -893,7 +905,7 @@ extern int luaCommandCounters[LUA_BUTTON_COUNT];
 	lua_register(lState, "restartEtb", [](lua_State*) {
 		// this is about Lua sensor acting in place of real analog PPS sensor
 		// todo: smarter implementation
-		doInitElectronicThrottle();
+		doInitElectronicThrottle(true); // lame, we run with 'isStartupInit=true' in order to reset, NOT COOL
 		return 0;
 	});
 #endif // EFI_ELECTRONIC_THROTTLE_BODY

@@ -184,12 +184,6 @@ float getConfigValueByHash(const int hash) {
 // useIdleAdvanceWhileCoasting
 		case 586887955:
 			return engineConfiguration->useIdleAdvanceWhileCoasting;
-// tpsMin
-		case 513872736:
-			return engineConfiguration->tpsMin;
-// tpsMax
-		case 513872482:
-			return engineConfiguration->tpsMax;
 // tpsErrorDetectionTooLow
 		case 625338761:
 			return engineConfiguration->tpsErrorDetectionTooLow;
@@ -262,9 +256,6 @@ float getConfigValueByHash(const int hash) {
 // idleMaximumAirmass
 		case -1671871759:
 			return engineConfiguration->idleMaximumAirmass;
-// tuningDetector
-		case 1082602292:
-			return engineConfiguration->tuningDetector;
 // alternator_iTermMin
 		case 107641733:
 			return engineConfiguration->alternator_iTermMin;
@@ -352,6 +343,9 @@ float getConfigValueByHash(const int hash) {
 // disableFan2WhenStopped
 		case -311454863:
 			return engineConfiguration->disableFan2WhenStopped;
+// wizardPanelToShow
+		case 727066858:
+			return engineConfiguration->wizardPanelToShow;
 // driveWheelRevPerKm
 		case 991724096:
 			return engineConfiguration->driveWheelRevPerKm;
@@ -475,9 +469,6 @@ float getConfigValueByHash(const int hash) {
 // useStepperIdle
 		case -920116109:
 			return engineConfiguration->useStepperIdle;
-// enabledStep1Limiter
-		case -2068213709:
-			return engineConfiguration->enabledStep1Limiter;
 // lambdaProtectionEnable
 		case 1451020756:
 			return engineConfiguration->lambdaProtectionEnable;
@@ -532,6 +523,12 @@ float getConfigValueByHash(const int hash) {
 // modeledFlowIdle
 		case 600643125:
 			return engineConfiguration->modeledFlowIdle;
+// isTuningDetectorEnabled
+		case 1997151643:
+			return engineConfiguration->isTuningDetectorEnabled;
+// useAbsolutePressureForLagTime
+		case -1155937004:
+			return engineConfiguration->useAbsolutePressureForLagTime;
 // verboseCanBaseAddress
 		case 6238478:
 			return engineConfiguration->verboseCanBaseAddress;
@@ -580,12 +577,6 @@ float getConfigValueByHash(const int hash) {
 // stepperParkingExtraSteps
 		case -509113657:
 			return engineConfiguration->stepperParkingExtraSteps;
-// tps1SecondaryMin
-		case -1312968487:
-			return engineConfiguration->tps1SecondaryMin;
-// tps1SecondaryMax
-		case -1312968741:
-			return engineConfiguration->tps1SecondaryMax;
 // startCrankingDuration
 		case 644409862:
 			return engineConfiguration->startCrankingDuration;
@@ -718,9 +709,6 @@ float getConfigValueByHash(const int hash) {
 // tpsDecelEnleanmentMultiplier
 		case 1164012327:
 			return engineConfiguration->tpsDecelEnleanmentMultiplier;
-// mapPredictionBlendDuration
-		case 1445156767:
-			return engineConfiguration->mapPredictionBlendDuration;
 // noFuelTrimAfterDfcoTime
 		case 1286770247:
 			return engineConfiguration->noFuelTrimAfterDfcoTime;
@@ -793,15 +781,6 @@ float getConfigValueByHash(const int hash) {
 // ltft.maxRemove
 		case -269110527:
 			return engineConfiguration->ltft.maxRemove;
-// ltft.timeConstant
-		case 1941168166:
-			return engineConfiguration->ltft.timeConstant;
-// tps2SecondaryMin
-		case 18659930:
-			return engineConfiguration->tps2SecondaryMin;
-// tps2SecondaryMax
-		case 18659676:
-			return engineConfiguration->tps2SecondaryMax;
 // widebandOnSecondBus
 		case 1445062086:
 			return engineConfiguration->widebandOnSecondBus;
@@ -1042,12 +1021,6 @@ float getConfigValueByHash(const int hash) {
 // airTaperRpmRange
 		case -174866119:
 			return engineConfiguration->airTaperRpmRange;
-// tps2Min
-		case -224184878:
-			return engineConfiguration->tps2Min;
-// tps2Max
-		case -224185132:
-			return engineConfiguration->tps2Max;
 // tachPulsePerRev
 		case -2142425790:
 			return engineConfiguration->tachPulsePerRev;
@@ -1096,6 +1069,9 @@ float getConfigValueByHash(const int hash) {
 // startUpFuelPumpDuration
 		case -664540020:
 			return engineConfiguration->startUpFuelPumpDuration;
+// mafFilterParameter
+		case 1564984000:
+			return engineConfiguration->mafFilterParameter;
 // idlePidRpmDeadZone
 		case -528043591:
 			return engineConfiguration->idlePidRpmDeadZone;
@@ -1687,9 +1663,6 @@ float getConfigValueByHash(const int hash) {
 // kLinePeriodUs
 		case 1915146851:
 			return engineConfiguration->kLinePeriodUs;
-// rpmSoftLimitWindowSize
-		case 1092207266:
-			return engineConfiguration->rpmSoftLimitWindowSize;
 // rpmSoftLimitTimingRetard
 		case -543684839:
 			return engineConfiguration->rpmSoftLimitTimingRetard;
@@ -1906,6 +1879,9 @@ float getConfigValueByHash(const int hash) {
 // nitrousControlEnabled
 		case -582951931:
 			return engineConfiguration->nitrousControlEnabled;
+// vvlControlEnabled
+		case -708922423:
+			return engineConfiguration->vvlControlEnabled;
 // nitrousLuaGaugeArmingValue
 		case -1760115393:
 			return engineConfiguration->nitrousLuaGaugeArmingValue;
@@ -1975,6 +1951,33 @@ float getConfigValueByHash(const int hash) {
 // wastegatePositionClosedVoltage
 		case 20003211:
 			return engineConfiguration->wastegatePositionClosedVoltage;
+// vvlController.fuelAdderPercent
+		case 666098796:
+			return engineConfiguration->vvlController.fuelAdderPercent;
+// vvlController.ignitionRetard
+		case 1427131506:
+			return engineConfiguration->vvlController.ignitionRetard;
+// vvlController.minimumTps
+		case 1664936450:
+			return engineConfiguration->vvlController.minimumTps;
+// vvlController.minimumClt
+		case 1664917806:
+			return engineConfiguration->vvlController.minimumClt;
+// vvlController.maximumMap
+		case -102001909:
+			return engineConfiguration->vvlController.maximumMap;
+// vvlController.maximumAfr
+		case -102014810:
+			return engineConfiguration->vvlController.maximumAfr;
+// vvlController.activationRpm
+		case -798441680:
+			return engineConfiguration->vvlController.activationRpm;
+// vvlController.deactivationRpm
+		case -172907815:
+			return engineConfiguration->vvlController.deactivationRpm;
+// vvlController.deactivationRpmWindow
+		case 1849727793:
+			return engineConfiguration->vvlController.deactivationRpmWindow;
 // tcu_shiftTime
 		case -1658957891:
 			return config->tcu_shiftTime;
@@ -2330,16 +2333,6 @@ bool setConfigValueByName(const char *name, float value) {
 		engineConfiguration->useIdleAdvanceWhileCoasting = (int)value;
 		return 1;
 	}
-		case 513872736:
-	{
-		engineConfiguration->tpsMin = (int)value;
-		return 1;
-	}
-		case 513872482:
-	{
-		engineConfiguration->tpsMax = (int)value;
-		return 1;
-	}
 		case 625338761:
 	{
 		engineConfiguration->tpsErrorDetectionTooLow = (int)value;
@@ -2458,11 +2451,6 @@ bool setConfigValueByName(const char *name, float value) {
 		case -1671871759:
 	{
 		engineConfiguration->idleMaximumAirmass = (int)value;
-		return 1;
-	}
-		case 1082602292:
-	{
-		engineConfiguration->tuningDetector = (int)value;
 		return 1;
 	}
 		case 107641733:
@@ -2608,6 +2596,11 @@ bool setConfigValueByName(const char *name, float value) {
 		case -311454863:
 	{
 		engineConfiguration->disableFan2WhenStopped = (int)value;
+		return 1;
+	}
+		case 727066858:
+	{
+		engineConfiguration->wizardPanelToShow = (int)value;
 		return 1;
 	}
 		case 991724096:
@@ -2815,11 +2808,6 @@ bool setConfigValueByName(const char *name, float value) {
 		engineConfiguration->useStepperIdle = (int)value;
 		return 1;
 	}
-		case -2068213709:
-	{
-		engineConfiguration->enabledStep1Limiter = (int)value;
-		return 1;
-	}
 		case 1451020756:
 	{
 		engineConfiguration->lambdaProtectionEnable = (int)value;
@@ -2910,6 +2898,16 @@ bool setConfigValueByName(const char *name, float value) {
 		engineConfiguration->modeledFlowIdle = (int)value;
 		return 1;
 	}
+		case 1997151643:
+	{
+		engineConfiguration->isTuningDetectorEnabled = (int)value;
+		return 1;
+	}
+		case -1155937004:
+	{
+		engineConfiguration->useAbsolutePressureForLagTime = (int)value;
+		return 1;
+	}
 		case 6238478:
 	{
 		engineConfiguration->verboseCanBaseAddress = (int)value;
@@ -2988,16 +2986,6 @@ bool setConfigValueByName(const char *name, float value) {
 		case -509113657:
 	{
 		engineConfiguration->stepperParkingExtraSteps = (int)value;
-		return 1;
-	}
-		case -1312968487:
-	{
-		engineConfiguration->tps1SecondaryMin = (int)value;
-		return 1;
-	}
-		case -1312968741:
-	{
-		engineConfiguration->tps1SecondaryMax = (int)value;
 		return 1;
 	}
 		case 644409862:
@@ -3220,11 +3208,6 @@ bool setConfigValueByName(const char *name, float value) {
 		engineConfiguration->tpsDecelEnleanmentMultiplier = value;
 		return 1;
 	}
-		case 1445156767:
-	{
-		engineConfiguration->mapPredictionBlendDuration = value;
-		return 1;
-	}
 		case 1286770247:
 	{
 		engineConfiguration->noFuelTrimAfterDfcoTime = (int)value;
@@ -3343,21 +3326,6 @@ bool setConfigValueByName(const char *name, float value) {
 		case -269110527:
 	{
 		engineConfiguration->ltft.maxRemove = (int)value;
-		return 1;
-	}
-		case 1941168166:
-	{
-		engineConfiguration->ltft.timeConstant = (int)value;
-		return 1;
-	}
-		case 18659930:
-	{
-		engineConfiguration->tps2SecondaryMin = (int)value;
-		return 1;
-	}
-		case 18659676:
-	{
-		engineConfiguration->tps2SecondaryMax = (int)value;
 		return 1;
 	}
 		case 1445062086:
@@ -3760,16 +3728,6 @@ bool setConfigValueByName(const char *name, float value) {
 		engineConfiguration->airTaperRpmRange = (int)value;
 		return 1;
 	}
-		case -224184878:
-	{
-		engineConfiguration->tps2Min = (int)value;
-		return 1;
-	}
-		case -224185132:
-	{
-		engineConfiguration->tps2Max = (int)value;
-		return 1;
-	}
 		case -2142425790:
 	{
 		engineConfiguration->tachPulsePerRev = (int)value;
@@ -3848,6 +3806,11 @@ bool setConfigValueByName(const char *name, float value) {
 		case -664540020:
 	{
 		engineConfiguration->startUpFuelPumpDuration = (int)value;
+		return 1;
+	}
+		case 1564984000:
+	{
+		engineConfiguration->mafFilterParameter = (int)value;
 		return 1;
 	}
 		case -528043591:
@@ -4835,11 +4798,6 @@ bool setConfigValueByName(const char *name, float value) {
 		engineConfiguration->kLinePeriodUs = (int)value;
 		return 1;
 	}
-		case 1092207266:
-	{
-		engineConfiguration->rpmSoftLimitWindowSize = (int)value;
-		return 1;
-	}
 		case -543684839:
 	{
 		engineConfiguration->rpmSoftLimitTimingRetard = (int)value;
@@ -5200,6 +5158,11 @@ bool setConfigValueByName(const char *name, float value) {
 		engineConfiguration->nitrousControlEnabled = (int)value;
 		return 1;
 	}
+		case -708922423:
+	{
+		engineConfiguration->vvlControlEnabled = (int)value;
+		return 1;
+	}
 		case -1760115393:
 	{
 		engineConfiguration->nitrousLuaGaugeArmingValue = value;
@@ -5313,6 +5276,51 @@ bool setConfigValueByName(const char *name, float value) {
 		case 20003211:
 	{
 		engineConfiguration->wastegatePositionClosedVoltage = value;
+		return 1;
+	}
+		case 666098796:
+	{
+		engineConfiguration->vvlController.fuelAdderPercent = (int)value;
+		return 1;
+	}
+		case 1427131506:
+	{
+		engineConfiguration->vvlController.ignitionRetard = value;
+		return 1;
+	}
+		case 1664936450:
+	{
+		engineConfiguration->vvlController.minimumTps = (int)value;
+		return 1;
+	}
+		case 1664917806:
+	{
+		engineConfiguration->vvlController.minimumClt = (int)value;
+		return 1;
+	}
+		case -102001909:
+	{
+		engineConfiguration->vvlController.maximumMap = (int)value;
+		return 1;
+	}
+		case -102014810:
+	{
+		engineConfiguration->vvlController.maximumAfr = (int)value;
+		return 1;
+	}
+		case -798441680:
+	{
+		engineConfiguration->vvlController.activationRpm = (int)value;
+		return 1;
+	}
+		case -172907815:
+	{
+		engineConfiguration->vvlController.deactivationRpm = (int)value;
+		return 1;
+	}
+		case 1849727793:
+	{
+		engineConfiguration->vvlController.deactivationRpmWindow = (int)value;
 		return 1;
 	}
 		case -1658957891:

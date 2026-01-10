@@ -1,14 +1,13 @@
 package com.rusefi;
 
 import com.devexperts.logging.Logging;
-import com.rusefi.binaryprotocol.IoHelper;
-import com.rusefi.config.generated.Integration;
 import com.rusefi.io.IoStream;
 import com.rusefi.io.LinkManager;
 import com.rusefi.io.serial.BufferedSerialIoStream;
 import com.rusefi.io.tcp.TcpConnector;
 import com.rusefi.maintenance.*;
 import com.rusefi.io.UpdateOperationCallbacks;
+import com.rusefi.updater.OpenbltDetectorStrategy;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -138,7 +137,7 @@ public enum SerialPortScanner {
         // Give everyone a chance to finish
         try {
             // todo: see if everyone has already finished - make this sleep conditional!
-            // todo: lowe this timeout?
+            // todo: lower this timeout?
             Thread.sleep(5000);
         } catch (InterruptedException e) {
             // We got interrupted because the last port got found, nothing to do
@@ -146,10 +145,7 @@ public enum SerialPortScanner {
 
         // Interrupt all threads under lock to ensure no more objects are added to results
         synchronized (resultsLock) {
-            for (Thread t : threads) {
-                log.trace(String.format("Interrupting thread `%s`...", t.getName()));
-                t.interrupt();
-            }
+            ScannerHelper.interruptThreads(threads);
         }
 
         // Now check that we got everything - if any timed out, register them as unknown
@@ -175,6 +171,7 @@ public enum SerialPortScanner {
         boolean PCANConnected;
 
         final Set<String> serialPorts = LinkManager.getCommPorts();
+        log.info("getCommPorts: " + serialPorts);
 
         List<String> portsToInspect = new ArrayList<>();
 
@@ -251,16 +248,7 @@ public enum SerialPortScanner {
                 return false;
             }
 
-            stream.sendPacket(new byte[]{(byte) Integration.TS_QUERY_BOOTLOADER});
-
-            byte[] response = stream.getDataBuffer().getPacket(500, "ecuHasOpenblt");
-            if (!IoHelper.checkResponseCode(response, (byte) Integration.TS_RESPONSE_OK)) {
-                // ECU didn't understand request, bootloader certainly not supported
-                return false;
-            }
-
-            // Data byte indicates bootloader type
-            return response[1] == Integration.TS_QUERY_BOOTLOADER_OPENBLT;
+            return OpenbltDetectorStrategy.streamHasOpenBlt(stream);
         } catch (Exception e) {
             return false;
         }

@@ -132,31 +132,11 @@ typedef enum  __attribute__ ((__packed__)) {
   VVT_TOYOTA_3TOOTH_UZ = 27,
 
   VVT_SUBARU_7TOOTH = 28,
+
+  VVT_CUSTOM_1 = 29,
+
+  VVT_CUSTOM_2 = 30,
 } vvt_mode_e;
-
-/**
- * This enum is used to select your desired Engine Load calculation algorithm
- */
-typedef enum __attribute__ ((__packed__)) {
-	/**
-	 * Speed Density algorithm - Engine Load is a function of MAP, VE and target AFR
-	 * http://articles.sae.org/8539/
-	 */
-	LM_SPEED_DENSITY = 0,
-
-	/**
-	 * MAF with a known kg/hour function
-	 */
-	LM_REAL_MAF = 1,
-
-	LM_ALPHA_N = 2,
-
-	LM_LUA = 3,
-
-	// This mode is for unit testing only, so that tests don't have to rely on a particular real airmass mode
-	LM_MOCK = 100,
-
-} engine_load_mode_e;
 
 typedef enum __attribute__ ((__packed__)) {
 	DM_NONE = 0,
@@ -591,6 +571,7 @@ typedef enum __attribute__ ((__packed__)) {
 	CLUTCH_INPUT_LAUNCH = 1,
 	ALWAYS_ACTIVE_LAUNCH = 2,
 	STOP_INPUT_LAUNCH = 3,
+	LUA_LAUNCH = 4,
 } launchActivationMode_e;
 
 typedef enum __attribute__ ((__packed__)) {
@@ -621,9 +602,11 @@ typedef enum __attribute__ ((__packed__)) {
 	LUA_GAUGE_UPPER_BOUND = 1,
 } lua_gauge_meaning_e;
 
+// this one is "Rotational Idle", it's a naming mess https://github.com/rusefi/rusefi/issues/8435
 typedef enum __attribute__ ((__packed__)) {
 	SWITCH_INPUT_ANTILAG = 0,
 	ALWAYS_ON_ANTILAG = 1,
+	LUA_ANTILAG = 2,
 } antiLagActivationMode_e;
 
 typedef enum __attribute__ ((__packed__)) {
@@ -675,7 +658,8 @@ typedef enum __attribute__ ((__packed__)) {
 	B125KBPS = 4, // 125kbps
 	B250KBPS = 5, // 250kbps
 	B500KBPS = 6, // 500kbps
-	B1MBPS = 7, // 1Mbps
+	B666KBPS = 7, // 666kbps
+	B1MBPS = 8, // 1Mbps
 } can_baudrate_e;
 
 typedef enum __attribute__ ((__packed__)) {
@@ -709,6 +693,18 @@ typedef enum __attribute__((__packed__)) {
 	WBO_RE_ID15 = 14,
 	WBO_RE_ID16 = 15
 } can_wbo_re_id_e;
+
+// Hardware index, usually strapped by cfg pins and pull-up/pull-down resistors
+typedef enum  __attribute__((__packed__)) {
+	WBO_RE_HWIDX0 = 0,
+	WBO_RE_HWIDX1 = 1,
+	WBO_RE_HWIDX2 = 2,
+	WBO_RE_HWIDX3 = 3,
+	WBO_RE_HWIDX4 = 4,
+	WBO_RE_HWIDX5 = 5,
+	WBO_RE_HWIDX6 = 6,
+	WBO_RE_HWIDX7 = 7,
+} can_wbo_re_hwidx_e;
 
 typedef enum __attribute__((__packed__)) {
 	WBO_AEM_ID1  =  0,
@@ -877,4 +873,15 @@ typedef enum __attribute__ ((__packed__)) {
 	stftDisabledFuelCut = 9
 } stft_state_e;
 
+typedef enum __attribute__((__packed__)) {
+	ftRegionIdle = 0,
+	ftRegionOverrun = 1,
+	ftRegionPower = 2,
+	ftRegionCruise = 3,
+} ft_region_e;
+
 #endif // __cplusplus
+
+#include "generated/enums/rusefi_config_generated_enums.h"
+
+using namespace rusefi::generated::enums;

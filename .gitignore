@@ -26,8 +26,13 @@ log.txt
 *.kicad_prl
 .*-sentinel
 
+.gradle
+
 # Eclipse
 .metadata/
+
+# LSP server
+compile_commands.json
 
 # rusEFI simulator makes logs, ignore those
 rusefi_simulator_log.mlg

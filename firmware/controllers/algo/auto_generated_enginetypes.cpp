@@ -1,6 +1,6 @@
 #include "global.h"
 #include "engine_types.h"
-// was generated automatically by rusEFI tool  from engine_types.h // by enum_to_string.jar tool on Sun Aug 03 23:06:41 UTC 2025
+// was generated automatically by rusEFI tool  from engine_types.h // by enum_to_string.jar tool on Fri Dec 05 17:12:50 UTC 2025
 // see also gen_config_and_enums.bat
 
 
@@ -75,12 +75,24 @@ case LTFT_RESET:
   return "LTFT_RESET";
 case LUA_COMMAND_1:
   return "LUA_COMMAND_1";
+case LUA_COMMAND_10:
+  return "LUA_COMMAND_10";
 case LUA_COMMAND_2:
   return "LUA_COMMAND_2";
 case LUA_COMMAND_3:
   return "LUA_COMMAND_3";
 case LUA_COMMAND_4:
   return "LUA_COMMAND_4";
+case LUA_COMMAND_5:
+  return "LUA_COMMAND_5";
+case LUA_COMMAND_6:
+  return "LUA_COMMAND_6";
+case LUA_COMMAND_7:
+  return "LUA_COMMAND_7";
+case LUA_COMMAND_8:
+  return "LUA_COMMAND_8";
+case LUA_COMMAND_9:
+  return "LUA_COMMAND_9";
   }
  return NULL;
 }
@@ -394,12 +406,6 @@ case COMMAND_X14_UNUSED_15:
   return "COMMAND_X14_UNUSED_15";
 case COMMAND_X14_UNUSED_2:
   return "COMMAND_X14_UNUSED_2";
-case COMMAND_X14_UNUSED_3:
-  return "COMMAND_X14_UNUSED_3";
-case COMMAND_X14_UNUSED_4:
-  return "COMMAND_X14_UNUSED_4";
-case COMMAND_X14_UNUSED_5:
-  return "COMMAND_X14_UNUSED_5";
 case TS_ETB_AUTOCAL_0:
   return "TS_ETB_AUTOCAL_0";
 case TS_ETB_AUTOCAL_0_FAST:
@@ -426,6 +432,10 @@ case TS_GRAB_PEDAL_UP:
   return "TS_GRAB_PEDAL_UP";
 case TS_GRAB_PEDAL_WOT:
   return "TS_GRAB_PEDAL_WOT";
+case TS_GRAB_TPS_CLOSED:
+  return "TS_GRAB_TPS_CLOSED";
+case TS_GRAB_TPS_OPEN:
+  return "TS_GRAB_TPS_OPEN";
 case TS_RESET_MC33810:
   return "TS_RESET_MC33810";
 case TS_RESET_TLE8888:
@@ -440,14 +450,22 @@ case TS_SD_MOUNT_PC:
   return "TS_SD_MOUNT_PC";
 case TS_SD_UNMOUNT:
   return "TS_SD_UNMOUNT";
+case TS_SET_STEPPER_IDLE:
+  return "TS_SET_STEPPER_IDLE";
 case TS_START_STOP_ENGINE:
   return "TS_START_STOP_ENGINE";
+case TS_TCU_DOWNSHIFT_REQUEST:
+  return "TS_TCU_DOWNSHIFT_REQUEST";
+case TS_TCU_UPSHIFT_REQUEST:
+  return "TS_TCU_UPSHIFT_REQUEST";
 case TS_TRIGGER_STIMULATOR_DISABLE:
   return "TS_TRIGGER_STIMULATOR_DISABLE";
 case TS_TRIGGER_STIMULATOR_ENABLE:
   return "TS_TRIGGER_STIMULATOR_ENABLE";
 case TS_WIDEBAND_UPDATE:
   return "TS_WIDEBAND_UPDATE";
+case TS_WIDEBAND_UPDATE_FILE:
+  return "TS_WIDEBAND_UPDATE_FILE";
 case TS_WRITE_FLASH:
   return "TS_WRITE_FLASH";
   }
@@ -459,6 +477,12 @@ case TS_BENCH_CATEGORY:
   return "TS_BENCH_CATEGORY";
 case TS_BOARD_ACTION:
   return "TS_BOARD_ACTION";
+case TS_BOARD_ACTION2:
+  return "TS_BOARD_ACTION2";
+case TS_BOARD_ACTION3:
+  return "TS_BOARD_ACTION3";
+case TS_BOARD_ACTION4:
+  return "TS_BOARD_ACTION4";
 case TS_CLEAR_WARNINGS:
   return "TS_CLEAR_WARNINGS";
 case TS_COMMAND_1:
@@ -507,24 +531,24 @@ case TS_SET_ENGINE_TYPE:
   return "TS_SET_ENGINE_TYPE";
 case TS_SOLENOID_CATEGORY:
   return "TS_SOLENOID_CATEGORY";
+case TS_STOP_ENGINE:
+  return "TS_STOP_ENGINE";
 case TS_UNUSED_23:
   return "TS_UNUSED_23";
 case TS_UNUSED_24:
   return "TS_UNUSED_24";
-case TS_UNUSED_26:
-  return "TS_UNUSED_26";
-case TS_UNUSED_27:
-  return "TS_UNUSED_27";
-case TS_UNUSED_28:
-  return "TS_UNUSED_28";
 case TS_WIDEBAND:
   return "TS_WIDEBAND";
 case TS_WIDEBAND_FLASH_BY_ID:
   return "TS_WIDEBAND_FLASH_BY_ID";
+case TS_WIDEBAND_FLASH_BY_ID_FILE:
+  return "TS_WIDEBAND_FLASH_BY_ID_FILE";
 case TS_WIDEBAND_PING_BY_ID:
   return "TS_WIDEBAND_PING_BY_ID";
 case TS_WIDEBAND_SET_IDX_BY_ID:
   return "TS_WIDEBAND_SET_IDX_BY_ID";
+case TS_WIDEBAND_SET_SENS_BY_ID:
+  return "TS_WIDEBAND_SET_SENS_BY_ID";
 case TS_X14:
   return "TS_X14";
   }

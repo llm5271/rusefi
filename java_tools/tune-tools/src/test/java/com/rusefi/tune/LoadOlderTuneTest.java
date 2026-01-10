@@ -15,8 +15,10 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 
 import static com.devexperts.logging.Logging.getLogging;
+import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class LoadOlderTuneTest {
@@ -151,7 +153,7 @@ public class LoadOlderTuneTest {
         Assertions.assertThrows(IllegalStateException.class, () -> {
             String tsCustomLine = "bits, U08, @OFFSET@, [0:1], \"Single Coil\", \"Individual Coils\", \"Wasted Spark\", \"Two Distributors\"";
 
-            assertEquals(0, TuneTools.resolveEnumByName(tsCustomLine, "One coil"));
+            assertEquals(0, TuneTools.resolveEnumByName(tsCustomLine, "One coil", emptyMap()));
         });
     }
 
@@ -159,12 +161,12 @@ public class LoadOlderTuneTest {
     public void testCustomEnumOrdinal() {
         String tsCustomLine = "bits, U08, @OFFSET@, [0:1], \"Single Coil\", \"Individual Coils\", \"Wasted Spark\", \"Two Distributors\"";
 
-        assertEquals(0, TuneTools.resolveEnumByName(tsCustomLine, "Single coil"));
-        assertEquals(3, TuneTools.resolveEnumByName(tsCustomLine, "Two Distributors"));
+        assertEquals(0, TuneTools.resolveEnumByName(tsCustomLine, "Single coil", emptyMap()));
+        assertEquals(3, TuneTools.resolveEnumByName(tsCustomLine, "Two Distributors", emptyMap()));
     }
 
     @Test
-    public void findFieldByName() throws IniMemberNotFound {
+    public void findFieldByName() throws IniMemberNotFound, FileNotFoundException {
         IniFileModel ini = IniFileModelImpl.readIniFile(TuneReadWriteTest.TEST_INI);
         StringIniField make = (StringIniField) ini.getIniField("ENGINEMAKE");
         assertNotNull(make);

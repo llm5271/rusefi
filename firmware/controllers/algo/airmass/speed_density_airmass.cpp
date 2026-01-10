@@ -53,7 +53,9 @@ float SpeedDensityAirmass::getAirflow(float rpm, float map, bool postState) {
 }
 
 float SpeedDensityAirmass::getPredictiveMap(float rpm, bool postState, float mapSensor) {
-	float blendDuration = engineConfiguration->mapPredictionBlendDuration;
+	float blendDuration = interpolate2d(rpm, config->predictiveMapBlendDurationBins,
+						config->predictiveMapBlendDurationValues);
+
 	float elapsedTime = m_predictionTimer.getElapsedSeconds();
 
 	if (m_isMapPredictionActive && elapsedTime >= blendDuration) {
@@ -76,6 +78,7 @@ float SpeedDensityAirmass::getPredictiveMap(float rpm, bool postState, float map
 
 			if (predictedMap > mapSensor) {
 				m_isMapPredictionActive = true;
+			  engine->module<TpsAccelEnrichment>()->m_timeSinceAccel.reset();
 				m_predictionTimer.reset();
 				m_initialPredictedMap = predictedMap;
 				m_initialRealMap = mapSensor;
@@ -83,6 +86,7 @@ float SpeedDensityAirmass::getPredictiveMap(float rpm, bool postState, float map
 			}
 		}
 	}
+  engine->outputChannels.isMapPredictionActive = m_isMapPredictionActive;
 
 	if (!m_isMapPredictionActive) {
 		effectiveMap = mapSensor;
